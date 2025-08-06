@@ -3,7 +3,7 @@ import BadUsername from "../models/badUsernamedb.mjs";
 
 const router = express.Router();
 
-// GET all bad usernames
+// All bad usernames
 router.get("/", async (req, res) => {
   try {
     let badUsernameDoc = await BadUsername.findOne();
@@ -18,7 +18,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// POST add new bad username
+// Add new bad username
 router.post("/", async (req, res) => {
   try {
     const { username } = req.body;
@@ -38,7 +38,7 @@ router.post("/", async (req, res) => {
   }
 });
 
-// PATCH update entire usernames array
+// Update entire usernames array
 router.patch("/", async (req, res) => {
   try {
     const { usernames } = req.body;
@@ -52,7 +52,7 @@ router.patch("/", async (req, res) => {
       badUsernameDoc = new BadUsername({ usernames: [] });
     }
 
-    // Clean and normalize usernames
+    // Clean and normalise usernames
     badUsernameDoc.usernames = usernames.map(username => username.trim().toLowerCase());
     await badUsernameDoc.save();
     
@@ -63,7 +63,7 @@ router.patch("/", async (req, res) => {
   }
 });
 
-// DELETE remove bad username
+// Remove bad username
 router.delete("/:username", async (req, res) => {
   try {
     const { username } = req.params;
@@ -84,7 +84,7 @@ router.delete("/:username", async (req, res) => {
 });
 
 
-// GET check if username is bad
+// Check if username is bad
 router.get("/check/:username", async (req, res) => {
   try {
     const { username } = req.params;

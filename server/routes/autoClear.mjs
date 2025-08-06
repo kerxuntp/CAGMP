@@ -4,7 +4,7 @@ import AutoClearLog from '../models/autoClearLogsdb.mjs';
 
 const router = express.Router();
 
-// GET config for a collection
+// Get config for a collection
 router.get('/:collectionId', async (req, res) => {
   try {
     const config = await AutoClearConfig.findOne({ collectionId: req.params.collectionId });
@@ -15,7 +15,7 @@ router.get('/:collectionId', async (req, res) => {
   }
 });
 
-// POST config for a collection
+// Add configs for a collection
 router.post('/:collectionId', async (req, res) => {
   const { collectionId } = req.params;
   const { interval, target, clearTime, startDate, endDate, customIntervalValue, customIntervalUnit } = req.body;
@@ -71,7 +71,7 @@ router.post('/:collectionId', async (req, res) => {
   }
 });
 
-// DELETE config for a collection
+// Delete config for a collection
 router.delete('/:collectionId', async (req, res) => {
   try {
     const result = await AutoClearConfig.deleteOne({ collectionId: req.params.collectionId });
@@ -84,7 +84,7 @@ router.delete('/:collectionId', async (req, res) => {
   }
 });
 
-// GET logs for a collection
+// Get logs for a collection
 router.get('/:collectionId/logs', async (req, res) => {
   try {
     const logs = await AutoClearLog.find({ collectionId: req.params.collectionId })

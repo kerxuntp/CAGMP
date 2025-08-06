@@ -6,6 +6,7 @@ import "./MainStyles.css";
 const CreateCollection = () => {
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
+  const [welcomeMessage, setWelcomeMessage] = useState(""); // <-- NEW
   const [isPublic, setIsPublic] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [prevIsPublic, setPrevIsPublic] = useState(false);
@@ -45,7 +46,7 @@ const CreateCollection = () => {
       try {
         const res = await fetch("http://localhost:5000/collections");
         const data = await res.json();
-        const publicCol = data.find((c) => c.isPublic && c.isOnline); // Check for online public collection
+        const publicCol = data.find((c) => c.isPublic && c.isOnline);
         setExistingPublicCollection(publicCol || null);
       } catch {
         console.error("Failed to check public collections");
@@ -65,13 +66,31 @@ const CreateCollection = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (name.length > 20) {
+      setModalTitle("Invalid Input");
+      setModalMessage("Collection name cannot exceed 20 characters.");
+      setShowErrorModal(true);
+      return;
+    }
+    if (!isPublic && code.length > 6) {
+      setModalTitle("Invalid Input");
+      setModalMessage("Collection code cannot exceed 6 characters.");
+      setShowErrorModal(true);
+      return;
+    }
+    if (welcomeMessage.length > 100) {
+      setModalTitle("Invalid Input");
+      setModalMessage("Welcome message cannot exceed 100 characters.");
+      setShowErrorModal(true);
+      return;
+    }
     if (!name.trim()) {
       setModalTitle("Invalid Input");
       setModalMessage("Please enter a collection name.");
       setShowErrorModal(true);
       return;
     }
-    if (!isPublic && !code.trim()) { // Only check code for non-public collections
+    if (!isPublic && !code.trim()) {
       setModalTitle("Invalid Input");
       setModalMessage("Please enter or generate a collection code.");
       setShowErrorModal(true);
@@ -98,6 +117,7 @@ const CreateCollection = () => {
           code: isPublic ? undefined : code,
           isPublic,
           isOnline,
+          welcomeMessage, // <-- NEW
         }),
       });
       if (res.ok) {
@@ -244,6 +264,14 @@ const CreateCollection = () => {
               <label style={{ marginLeft: "8px" }}>Online</label>
             </div>
           </div>
+          {/* Welcome Message Field */}
+          <textarea
+            placeholder="Welcome message for players (optional)"
+            value={welcomeMessage}
+            onChange={e => setWelcomeMessage(e.target.value)}
+            className="login-btn"
+            style={{ marginBottom: "10px", backgroundColor: "white", minHeight: "60px" }}
+          />
           <button
             type="submit"
             className="login-btn"

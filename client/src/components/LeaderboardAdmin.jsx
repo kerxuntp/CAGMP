@@ -5,7 +5,9 @@ import './MainStyles.css';
 import './LeaderboardStyles.css';
 import AlertModal from "./AlertModal";
 import { ManualClearModal, AutoClearModal, AutoClearLogModal } from "./LeaderboardClearModals";
+import Loading from "./Loading";
 
+// Define filter options for the leaderboard (e.g., Today, This Week)
 const FILTERS = [
   { label: "Today", value: "day" },
   { label: "This Week", value: "week" },
@@ -13,6 +15,7 @@ const FILTERS = [
   { label: "All Time", value: "all" },
 ];
 
+// Helper function to check if a date falls within a filter range (day, week, month, or all)
 function isWithin(date, filter) {
   const now = new Date();
   const d = new Date(date);
@@ -31,14 +34,15 @@ export default function LeaderboardAdmin() {
   const baseUrl = "http://localhost:5000";
   const navigate = useNavigate();
 
-  const [players, setPlayers] = useState([]);
-  const [collections, setCollections] = useState({});
-  const [filter, setFilter] = useState("all");
-  const [selectedCollection, setSelectedCollection] = useState("all");
-  const [page, setPage] = useState(0);
-  const [hoveredPlayerId, setHoveredPlayerId] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [autoClearConfigs, setAutoClearConfigs] = useState({});
+  // State for managing leaderboard data and UI
+  const [players, setPlayers] = useState([]); // Stores player data
+  const [collections, setCollections] = useState({}); // Maps collection IDs to names
+  const [filter, setFilter] = useState("all"); // Time filter (day, week, month, all)
+  const [selectedCollection, setSelectedCollection] = useState("all"); // Selected collection filter
+  const [page, setPage] = useState(0); // Current page for pagination
+  const [hoveredPlayerId, setHoveredPlayerId] = useState(null); // Tracks hovered player for tooltip
+  const [loading, setLoading] = useState(true); // Loading state for data fetching
+  const [autoClearConfigs, setAutoClearConfigs] = useState({}); // Auto-clear settings per collection
   const [tempAuto, setTempAuto] = useState({
     interval: "day",
     target: "today",
@@ -46,17 +50,17 @@ export default function LeaderboardAdmin() {
     endDate: null,
     customIntervalValue: null,
     customIntervalUnit: "minute",
-  });
-  const [showManualModal, setShowManualModal] = useState(false);
-  const [manualRange, setManualRange] = useState("day");
-  const [manualCol, setManualCol] = useState("all");
-  const [showAutoModal, setShowAutoModal] = useState(false);
-  const [showLogModal, setShowLogModal] = useState(false);
-  const [logs, setLogs] = useState([]);
-  const [logCollection, setLogCollection] = useState("all");
-  const [selectedConfigCollection, setSelectedConfigCollection] = useState(null);
+  }); // Temporary state for auto-clear modal
+  const [showManualModal, setShowManualModal] = useState(false); // Manual clear modal visibility
+  const [manualRange, setManualRange] = useState("day"); // Manual clear time range
+  const [manualCol, setManualCol] = useState("all"); // Manual clear collection
+  const [showAutoModal, setShowAutoModal] = useState(false); // Auto-clear modal visibility
+  const [showLogModal, setShowLogModal] = useState(false); // Auto-clear log modal visibility
+  const [logs, setLogs] = useState([]); // Auto-clear logs
+  const [logCollection, setLogCollection] = useState("all"); // Selected collection for logs
+  const [selectedConfigCollection, setSelectedConfigCollection] = useState(null); // Selected collection for auto-clear config
 
-  // AlertModal states
+  // Alert modal states
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
@@ -66,8 +70,9 @@ export default function LeaderboardAdmin() {
   const [pendingClearCount, setPendingClearCount] = useState(0);
   const [pendingDeleteConfig, setPendingDeleteConfig] = useState(false);
 
-  const pageSize = 5;
+  const pageSize = 5; // Number of players per page
 
+  // Fetch initial data (players, collections, auto-clear configs) when component mounts
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
@@ -111,8 +116,10 @@ export default function LeaderboardAdmin() {
     fetchData();
   }, []);
 
+  // Reset page to 0 when filter or collection changes
   useEffect(() => setPage(0), [filter, selectedCollection]);
 
+  // Fetch auto-clear logs when log modal is opened for a specific collection
   useEffect(() => {
     if (showLogModal && selectedCollection !== "all") {
       async function fetchLogs() {
@@ -131,6 +138,7 @@ export default function LeaderboardAdmin() {
     }
   }, [showLogModal, selectedCollection]);
 
+  // Filter players based on time filter and selected collection
   const filteredPlayers = players.filter(p =>
     isWithin(p.finishedAt, filter) &&
     (selectedCollection === "all" || p.collectionId === selectedCollection)
@@ -138,12 +146,14 @@ export default function LeaderboardAdmin() {
   const totalPages = Math.ceil(filteredPlayers.length / pageSize);
   const pagedPlayers = filteredPlayers.slice(page * pageSize, (page + 1) * pageSize);
 
+  // Format time in seconds to a readable string (e.g., 1h 2m 3s)
   const formatTime = (s) => {
     const m = Math.floor(s / 60), sec = s % 60;
     const h = Math.floor(m / 60);
     return `${h > 0 ? `${h}h ` : ""}${m % 60}m ${sec}s`;
   };
 
+  // Format date to a readable string (e.g., "Jan 1, 2025, 12:00")
   const formatDate = (dateStr) => new Date(dateStr).toLocaleString("en-SG", {
     year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
   });
@@ -228,7 +238,7 @@ export default function LeaderboardAdmin() {
     const payload = {
       interval: tempAuto.interval,
       target: tempAuto.target,
-      clearTime: tempAuto.clearTime, 
+      clearTime: tempAuto.clearTime,
       ...(tempAuto.target === "custom" && {
         startDate: tempAuto.startDate,
         endDate: tempAuto.endDate,
@@ -314,18 +324,20 @@ export default function LeaderboardAdmin() {
     setPendingDeleteConfig(false);
   };
 
+  // Show loading spinner while fetching data
   if (loading) {
     return (
       <div className="page-container">
         <img src="/images/waterfall.jpg" alt="Background" className="page-background" />
         <div className="page-overlay"></div>
         <div className="page-content" style={{ textAlign: "center" }}>
-          <p>Loading leaderboard...</p>
+          <Loading />
         </div>
       </div>
     );
   }
 
+  // Main leaderboard UI
   return (
     <div className="page-container">
       <img src="/images/waterfall.jpg" alt="Background" className="page-background" />
@@ -333,7 +345,8 @@ export default function LeaderboardAdmin() {
       <div className="page-content leaderboard-page">
         <h1 className="leaderboard-title">Admin Leaderboard</h1>
 
-        <div style={{ display: "flex", gap: 10, marginBottom: 20, justifyContent: "center" }}>
+        {/* Filter dropdowns for time and collection */}
+        <div className="leaderboard-filters">
           <select className="filter-select" value={filter} onChange={e => setFilter(e.target.value)}>
             {FILTERS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
           </select>
@@ -345,28 +358,31 @@ export default function LeaderboardAdmin() {
           </select>
         </div>
 
+        {/* Display auto-clear config info if a specific collection is selected */}
         {selectedCollection !== "all" && autoClearConfigs[selectedCollection] && (
-          <div style={{ textAlign: "center", marginBottom: 20 }}>
-            <p style={{ fontSize: "0.9em", color: "#666" }}>
+          <div className="auto-clear-info">
+            <p>
               <strong>Auto-Clear Config:</strong> Clear {autoClearConfigs[selectedCollection].interval === "custom" ? `every ${autoClearConfigs[selectedCollection].customIntervalValue} ${autoClearConfigs[selectedCollection].customIntervalUnit}` : `every ${autoClearConfigs[selectedCollection].interval}`} 
               {autoClearConfigs[selectedCollection].target === "custom" ? `, data from ${new Date(autoClearConfigs[selectedCollection].startDate).toLocaleDateString()} to ${new Date(autoClearConfigs[selectedCollection].endDate).toLocaleDateString()}` : `, ${autoClearConfigs[selectedCollection].target} data`}
             </p>
           </div>
         )}
 
+        {/* Show message if no players match the filters */}
         {pagedPlayers.length === 0 ? (
-          <div style={{ textAlign: "center", margin: "40px 0" }}>
+          <div className="no-players">
             <p className="no-results">
               No completed players in {selectedCollection === "all" ? "All Collections" : collections[selectedCollection]}.
             </p>
             {filter !== "all" && (
-              <p style={{ fontSize: "14px", color: "#666", marginTop: "10px" }}>
+              <p className="no-results-tip">
                 Try changing the time filter to see more results.
               </p>
             )}
           </div>
         ) : (
           <>
+            {/* Leaderboard table */}
             <table className="leaderboard-table">
               <thead>
                 <tr>
@@ -384,7 +400,7 @@ export default function LeaderboardAdmin() {
                   return (
                     <tr
                       key={player._id}
-                      style={{ backgroundColor: "rgba(255, 255, 255, 0.35)" }}
+                      className="leaderboard-row"
                       onMouseEnter={() => setHoveredPlayerId(player._id)}
                       onMouseLeave={() => setHoveredPlayerId(null)}
                     >
@@ -409,31 +425,23 @@ export default function LeaderboardAdmin() {
               </tbody>
             </table>
 
+            {/* Pagination controls */}
             {totalPages > 1 && (
-              <div className="pagination" style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                gap: "20px",
-                margin: "20px 0",
-                maxWidth: "300px",
-                marginLeft: "auto",
-                marginRight: "auto"
-              }}>
+              <div className="pagination leaderboard-pagination">
                 <button
                   onClick={() => setPage(p => Math.max(0, p - 1))}
                   disabled={page === 0}
-                  style={{ minWidth: "80px" }}
+                  className="pagination-btn"
                 >
                   ← Prev
                 </button>
-                <span style={{ textAlign: "center", minWidth: "100px" }}>
+                <span className="pagination-info">
                   Page {page + 1} of {totalPages}
                 </span>
                 <button
                   onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
                   disabled={page >= totalPages - 1}
-                  style={{ minWidth: "80px" }}
+                  className="pagination-btn"
                 >
                   Next →
                 </button>
@@ -442,64 +450,33 @@ export default function LeaderboardAdmin() {
           </>
         )}
 
-        <div style={{
-          marginTop: 30,
-          display: "flex",
-          gap: 12,
-          justifyContent: "center",
-          flexWrap: "wrap"
-        }}>
+        {/* Action buttons for manual clear, auto-clear, logs, and return */}
+        <div className="admin-action-buttons">
           <button
             onClick={openManual}
-            style={{
-              padding: "10px 20px",
-              fontSize: "14px",
-              borderRadius: "8px",
-              border: "none",
-              background: "#ff6b6b",
-              color: "white",
-              cursor: "pointer",
-              minWidth: "120px"
-            }}
+            className="manual-clear-btn"
           >
             Manual Clear
           </button>
           <button
             onClick={openAuto}
-            style={{
-              padding: "10px 20px",
-              fontSize: "14px",
-              borderRadius: "8px",
-              border: "none",
-              background: "#4ecdc4",
-              color: "white",
-              cursor: "pointer",
-              minWidth: "120px"
-            }}
+            className="auto-clear-btn"
           >
             Auto-Clear
           </button>
           <button
             onClick={openLogs}
-            style={{
-              padding: "10px 20px",
-              fontSize: "14px",
-              borderRadius: "8px",
-              border: "none",
-              background: "#2196F3",
-              color: "white",
-              cursor: "pointer",
-              minWidth: "120px"
-            }}
+            className="log-btn"
           >
             View Auto-Clear Logs
           </button>
-          <button className="return-button" style={{ minWidth: "120px" }} onClick={() => navigate("/admin")}>
+          <button className="return-button" onClick={() => navigate("/admin")}>
             Return
           </button>
         </div>
       </div>
 
+      {/* Modal for configuring manual leaderboard clearing */}
       <ManualClearModal
         isOpen={showManualModal}
         manualRange={manualRange}
@@ -510,16 +487,18 @@ export default function LeaderboardAdmin() {
         onConfirm={confirmManualClear}
         onClose={closeManual}
       />
+      {/* Modal for setting up automatic leaderboard clearing */}
       <AutoClearModal
         isOpen={showAutoModal}
         autoClear={autoClearConfigs[selectedConfigCollection]}
         tempAuto={tempAuto}
         setTempAuto={setTempAuto}
         onConfirm={confirmAuto}
-        onClose={closeAuto}
         onDelete={deleteAuto}
         collectionName={collections[selectedConfigCollection] || "Selected Collection"}
+        onClose={closeAuto}
       />
+      {/* Modal for viewing auto-clear logs */}
       <AutoClearLogModal
         isOpen={showLogModal}
         collections={collections}
@@ -528,6 +507,7 @@ export default function LeaderboardAdmin() {
         logCollection={logCollection}
         onClose={() => setShowLogModal(false)}
       />
+      {/* Modal for confirming manual clear or auto-clear config deletion */}
       <AlertModal
         isOpen={showConfirmModal && (pendingManualClear || pendingDeleteConfig)}
         onClose={handleModalClose}
@@ -539,6 +519,7 @@ export default function LeaderboardAdmin() {
         type="warning"
         showCancel={true}
       />
+      {/* Modal for showing success messages */}
       <AlertModal
         isOpen={showSuccessModal}
         onClose={handleModalClose}
@@ -548,6 +529,7 @@ export default function LeaderboardAdmin() {
         type="success"
         showCancel={false}
       />
+      {/* Modal for showing error messages */}
       <AlertModal
         isOpen={showErrorModal}
         onClose={handleModalClose}

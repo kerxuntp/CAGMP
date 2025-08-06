@@ -8,6 +8,7 @@ const HomePage = ({ previewData }) => {
 
   useEffect(() => {
     if (!previewData) fetchCustomisation();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchCustomisation = async () => {

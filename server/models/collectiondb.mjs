@@ -36,7 +36,11 @@ const collectionSchema = new mongoose.Schema({
   isOnline: { 
     type: Boolean, 
     default: true 
-  }
+  },
+  welcomeMessage: {
+    type: String,
+    default: "",
+  },
 }, {
   timestamps: true,
 });

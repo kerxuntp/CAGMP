@@ -1,14 +1,14 @@
 import React from 'react';
 import './MainStyles.css';
 
-const AlertModal = ({ 
-  isOpen, 
-  onClose, 
-  onConfirm, 
-  title = "Confirm", 
-  message = "Are you sure?", 
-  confirmText = "Confirm", 
-  cancelText = "Cancel", 
+const AlertModal = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  title = "Confirm",
+  message = "Are you sure?",
+  confirmText = "Confirm",
+  cancelText = "Cancel",
   type = "info", // "info", "success", "warning", "error"
   icon = null,
   showCancel = true
@@ -64,37 +64,150 @@ const AlertModal = ({
     onClose();
   };
 
+  const modalOverlayStyle = {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    background: 'rgba(0, 0, 0, 0.6)',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+    animation: 'fadeIn 0.2s ease-out'
+  };
+
+  const modalContentStyle = {
+    background: 'white',
+    borderRadius: '12px',
+    width: '90%',
+    maxWidth: '400px',
+    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
+    animation: 'slideIn 0.3s ease-out',
+    borderTop: `4px solid ${typeStyles.borderColor}`
+  };
+
+  const modalHeaderStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    padding: '20px 25px 15px',
+    borderBottom: '1px solid #f0f0f0'
+  };
+
+  const modalIconStyle = {
+    fontSize: '24px',
+    lineHeight: 1,
+    color: typeStyles.iconColor
+  };
+
+  const modalTitleStyle = {
+    margin: 0,
+    fontSize: '18px',
+    fontWeight: 600,
+    color: '#333'
+  };
+
+  const modalBodyStyle = {
+    padding: '15px 25px 20px'
+  };
+
+  const modalBodyTextStyle = {
+    margin: 0,
+    fontSize: '16px',
+    lineHeight: 1.5,
+    color: '#555'
+  };
+
+  const modalActionsStyle = {
+    display: 'flex',
+    gap: '10px',
+    padding: '15px 25px 25px',
+    justifyContent: 'flex-end'
+  };
+
+  const cancelButtonStyle = {
+    padding: '10px 20px',
+    border: '1px solid #ddd',
+    borderRadius: '8px',
+    fontSize: '14px',
+    fontWeight: 500,
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    minWidth: '80px',
+    background: '#f5f5f5',
+    color: '#666'
+  };
+
+  const cancelButtonHoverStyle = {
+    background: '#e8e8e8',
+    borderColor: '#ccc'
+  };
+
+  const confirmButtonStyle = {
+    padding: '10px 20px',
+    border: 'none',
+    borderRadius: '8px',
+    fontSize: '14px',
+    fontWeight: 500,
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    minWidth: '80px',
+    color: 'white',
+    background: typeStyles.confirmBg
+  };
+
+  const confirmButtonHoverStyle = {
+    transform: 'translateY(-1px)',
+    boxShadow: '0 4px 12px rgba(33, 150, 243, 0.3)'
+  };
+
   return (
-    <div className="alert-modal-overlay" onClick={handleCancel}>
-      <div 
-        className="alert-modal-content" 
+    <div style={modalOverlayStyle} onClick={handleCancel}>
+      <div
+        style={modalContentStyle}
         onClick={(e) => e.stopPropagation()}
-        style={{ borderTop: `4px solid ${typeStyles.borderColor}` }}
       >
-        <div className="alert-modal-header">
-          <div className="alert-modal-icon" style={{ color: typeStyles.iconColor }}>
+        <div style={modalHeaderStyle}>
+          <div style={modalIconStyle}>
             {icon || getDefaultIcon()}
           </div>
-          <h3 className="alert-modal-title">{title}</h3>
+          <h3 style={modalTitleStyle}>{title}</h3>
         </div>
-        
-        <div className="alert-modal-body">
-          <p>{message}</p>
+
+        <div style={modalBodyStyle}>
+          <p style={modalBodyTextStyle}>{message}</p>
         </div>
-        
-        <div className="alert-modal-actions">
+
+        <div style={modalActionsStyle}>
           {showCancel && (
-            <button 
-              className="alert-modal-cancel-btn" 
+            <button
+              style={cancelButtonStyle}
               onClick={handleCancel}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = cancelButtonHoverStyle.background;
+                e.currentTarget.style.borderColor = cancelButtonHoverStyle.borderColor;
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = cancelButtonStyle.background;
+                e.currentTarget.style.borderColor = cancelButtonStyle.border;
+              }}
             >
               {cancelText}
             </button>
           )}
-          <button 
-            className="alert-modal-confirm-btn" 
+          <button
+            style={confirmButtonStyle}
             onClick={handleConfirm}
-            style={{ background: typeStyles.confirmBg }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.transform = confirmButtonHoverStyle.transform;
+              e.currentTarget.style.boxShadow = confirmButtonHoverStyle.boxShadow;
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.transform = 'none';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
           >
             {confirmText}
           </button>

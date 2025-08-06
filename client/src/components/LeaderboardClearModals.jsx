@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import Tooltip from "./Tooltip";
 
 const FILTERS = [
   { label: "Today", value: "day" },
@@ -69,6 +70,59 @@ export function AutoClearModal({ isOpen, autoClear, tempAuto, setTempAuto, onCon
           </p>
         )}
 
+        {/* Info Bubble using Tooltip */}
+        {tempAuto.interval && (
+          <Tooltip>
+            {tempAuto.interval === "day" && (
+              <span>
+                <strong>Daily:</strong> Clears every day at the time you set.<br />
+                <em>Default: 11:59PM</em>
+              </span>
+            )}
+            {tempAuto.interval === "week" && (
+              <span>
+                <strong>Weekly:</strong> Clears every week on the same weekday and time you set.<br />
+                <em>Default: Sunday 11:59PM</em>
+              </span>
+            )}
+            {tempAuto.interval === "month" && (
+              <span>
+                <strong>Monthly:</strong> Clears every month on the same day and time you set.<br />
+                <em>Default: Last day of the month 11:59PM</em>
+              </span>
+            )}
+            {tempAuto.interval === "custom" && (
+              <span>
+                <strong>Custom:</strong> Clears at your chosen interval and time.
+              </span>
+            )}
+          </Tooltip>
+        )}
+
+        {/* Default timing toggle for weekly/monthly */}
+        {["week", "month"].includes(tempAuto.interval) && (
+          <div style={{ marginBottom: 10, textAlign: "left", display: "flex", alignItems: "center", gap: "8px" }}>
+            <span style={{ fontWeight: "bold", color: "black", whiteSpace: "nowrap" }}>
+              Use default timing
+            </span>
+            <input
+              type="checkbox"
+              checked={!!tempAuto.useDefault}
+              onChange={e => {
+                const checked = e.target.checked;
+                setTempAuto(t => ({
+                  ...t,
+                  useDefault: checked,
+                  clearTime: checked ? "23:59" : t.clearTime || "00:00",
+                  defaultDay: checked && tempAuto.interval === "week" ? "Sunday" : undefined,
+                  defaultDayOfMonth: checked && tempAuto.interval === "month" ? "last" : undefined,
+                }));
+              }}
+              style={{ marginLeft: "6px" }}
+            />
+          </div>
+        )}
+
         <div style={{ marginBottom: 10, textAlign: "left", color: "black" }}>
           <label style={{ color: "black", fontWeight: "bold" }}>Clear Frequency:</label>
           <select
@@ -81,6 +135,17 @@ export function AutoClearModal({ isOpen, autoClear, tempAuto, setTempAuto, onCon
                 target: newInterval === "custom" ? t.target : newInterval === "day" ? "today" : newInterval === "week" ? "week" : "month",
                 customIntervalValue: newInterval === "custom" ? t.customIntervalValue || 1 : null,
                 customIntervalUnit: newInterval === "custom" ? t.customIntervalUnit || "minute" : null,
+                clearTime:
+                  newInterval === "day"
+                    ? "23:59"
+                    : newInterval === "week"
+                    ? "23:59"
+                    : newInterval === "month"
+                    ? "23:59"
+                    : t.clearTime || "00:00",
+                useDefault: false,
+                defaultDay: undefined,
+                defaultDayOfMonth: undefined,
               }));
             }}
             style={{ width: "100%", padding: "5px" }}
@@ -103,7 +168,7 @@ export function AutoClearModal({ isOpen, autoClear, tempAuto, setTempAuto, onCon
                 value={tempAuto.customIntervalValue || ""}
                 onChange={(e) => setTempAuto((t) => ({ ...t, customIntervalValue: e.target.value }))}
                 placeholder="Enter number"
-                style={{ color: "black", width: "120px", padding: "5px" }}
+                style={{ color: "white", background: "#222", width: "120px", padding: "5px" }}
               />
               <select
                 value={tempAuto.customIntervalUnit || "minute"}
@@ -174,7 +239,8 @@ export function AutoClearModal({ isOpen, autoClear, tempAuto, setTempAuto, onCon
             type="time"
             value={tempAuto.clearTime || "00:00"}
             onChange={e => setTempAuto(t => ({ ...t, clearTime: e.target.value }))}
-            style={{ width: "120px", padding: "5px", color: "white", background: "#222" }} // <-- color: "white"
+            style={{ width: "120px", padding: "5px", color: "white", background: "#222" }}
+            disabled={!!tempAuto.useDefault}
           />
         </div>
 
@@ -227,7 +293,7 @@ export function AutoClearModal({ isOpen, autoClear, tempAuto, setTempAuto, onCon
   );
 }
 
-export function AutoClearLogModal({ isOpen, collections, logs, setLogCollection, logCollection, onClose }) {
+export function AutoClearLogModal({ isOpen, collections, logs, logCollection, onClose }) {
   const [page, setPage] = useState(0);
   const pageSize = 3;
   const maxPages = 10; // Limit to 10 pages (30 logs)
@@ -252,22 +318,6 @@ export function AutoClearLogModal({ isOpen, collections, logs, setLogCollection,
         overflowY: "auto" 
       }}>
         <h3 style={{ color: "black", marginBottom: "10px" }}>Auto-Clear Logs</h3>
-        <div style={{ marginBottom: "10px", textAlign: "left", color: "black" }}>
-          <label style={{ color: "black" }}>Collection:</label>
-          <select
-            value={logCollection}
-            onChange={(e) => {
-              setLogCollection(e.target.value);
-              setPage(0);
-            }}
-            style={{ width: "100%", padding: "5px" }}
-          >
-            <option value="all">All Collections</option>
-            {Object.entries(collections).map(([id, name]) => (
-              <option key={id} value={id}>{name}</option>
-            ))}
-          </select>
-        </div>
         {filteredLogs.length === 0 ? (
           <p style={{ color: "black", textAlign: "center" }}>
             No logs available for {logCollection === "all" ? "All Collections" : collections[logCollection]}.

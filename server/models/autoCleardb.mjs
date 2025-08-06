@@ -42,6 +42,6 @@ const AutoClearSchema = new mongoose.Schema({
   timestamps: true,
 });
 
-AutoClearSchema.index({ collectionId: 1 }, { unique: true });
+AutoClearSchema.index({ collectionId: 1 }, { unique: true }); 
 const AutoClearConfig = mongoose.model('AutoClearConfig', AutoClearSchema);
 export default AutoClearConfig;

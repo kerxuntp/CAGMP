@@ -70,6 +70,12 @@ export default function EnterUsername() {
       return;
     }
 
+    if (cleanUsername.length > 20) {
+      showError("Username must not exceed 20 characters.");
+      setLoading(false);
+      return;
+    }
+
     // Check for special characters
     const hasSpecialChars = /[^a-zA-Z0-9\s]/.test(cleanUsername);
     if (hasSpecialChars) {

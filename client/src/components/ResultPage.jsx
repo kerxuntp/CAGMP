@@ -2,21 +2,24 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import './MainStyles.css';
 import AlertModal from './AlertModal';
+import Loading from './Loading';
 
 export default function ResultPage() {
+  // Core states
   const [player, setPlayer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [correctAnswers, setCorrectAnswers] = useState(0);
   const [totalQuestions, setTotalQuestions] = useState(0);
-  
-  // Modal states
+
+  // Modal visibility states
   const [showRedeemModal, setShowRedeemModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
-  
-  const navigate = useNavigate();
 
+  const navigate = useNavigate();
+  
+  // On component mount, fetch player data
   useEffect(() => {
     const playerId = sessionStorage.getItem("playerId");
     if (!playerId) {
@@ -25,13 +28,14 @@ export default function ResultPage() {
       return;
     }
 
-    // Get correct answers from sessionStorage
+    // Get stats stored during game
     const storedCorrect = sessionStorage.getItem("correctAnswers");
     const storedTotal = sessionStorage.getItem("totalQuestions");
-    
+
     if (storedCorrect) setCorrectAnswers(parseInt(storedCorrect));
     if (storedTotal) setTotalQuestions(parseInt(storedTotal));
 
+    // Fetch player info from backend
     const fetchPlayer = async () => {
       try {
         const res = await fetch(`http://localhost:5000/players/${playerId}`);
@@ -50,6 +54,7 @@ export default function ResultPage() {
     fetchPlayer();
   }, [navigate]);
 
+  // Format time in h m s
   const formatTime = (seconds) => {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
@@ -57,6 +62,7 @@ export default function ResultPage() {
     return `${h}h ${m}m ${s}s`;
   };
 
+  // Format current date and time for display
   const getCurrentDateTime = () => {
     const date = new Date();
     const formattedDate = date.toLocaleDateString("en-SG", {
@@ -72,12 +78,12 @@ export default function ResultPage() {
     return { formattedDate, formattedTime };
   };
 
-  // ✅ Replace window.confirm with modal
+  // Show modal when user clicks to redeem
   const handleRedeemClick = () => {
     setShowRedeemModal(true);
   };
 
-  // ✅ Handle modal confirmation
+  // PATCH request to backend to mark player as redeemed
   const handleConfirmRedeem = async () => {
     try {
       const res = await fetch(`http://localhost:5000/players/${player._id}`, {
@@ -98,10 +104,10 @@ export default function ResultPage() {
     }
   };
 
-  // ❌ REMOVED getPerformanceMessage function
+  // Show loader while fetching player info
+  if (loading) return <Loading />;
 
-  if (loading) return <p style={{ textAlign: "center" }}>Loading...</p>;
-
+  // Error fallback
   if (error) {
     return (
       <div style={{ textAlign: "center", marginTop: "4rem" }}>
@@ -134,22 +140,21 @@ export default function ResultPage() {
       <div className="page-overlay" />
 
       <div className="page-content" style={{ textAlign: "center" }}>
-        <h2>🎉 Congratulations {player.username}!</h2>
-        
+        <h2>Congratulations {player.username}!</h2>
+
         <p style={{ fontWeight: "bold", fontSize: "18px", color: "#333" }}>
           You have completed the quest with these stats:
         </p>
 
-        <div style={{ 
-          margin: "1.5rem 0", 
+        <div style={{
+          margin: "1.5rem 0",
           lineHeight: "1.8",
           padding: "20px",
           borderRadius: "10px"
         }}>
           <div style={{ fontSize: "18px", fontWeight: "bold", marginBottom: "10px", color: "#2e7d32" }}>
-            ✅ Correct Answers: {correctAnswers}/{totalQuestions}
+            Correct Answers: {correctAnswers}/{totalQuestions}
           </div>
-          {/* ❌ REMOVED performance message display */}
           <div><strong>Total Time (with penalties):</strong> {formatTime(totalTime)}</div>
           <div><strong>Hints Used:</strong> {player.hintsUsed || 0}</div>
           <div><strong>Questions Skipped:</strong> {player.questionsSkipped || 0}</div>
@@ -166,55 +171,55 @@ export default function ResultPage() {
           Redeem your gift at the booth now!
         </p>
 
+        {/* Show redeem button if not redeemed */}
         {!player.redeemed ? (
           <button
             onClick={handleRedeemClick}
             className="login-btn"
             style={{ marginTop: "1rem" }}
           >
-            🎁 Click here to redeem
+            Click here to redeem
           </button>
         ) : (
           <p style={{ color: "green", fontWeight: "bold", marginTop: "1rem" }}>
-            ✅ Redeemed at {new Date(player.redeemedAt).toLocaleString("en-SG")}
+            Redeemed at {new Date(player.redeemedAt).toLocaleString("en-SG")}
           </p>
         )}
 
-        <p style={{ 
-          marginTop: "2rem", 
-          fontWeight: "bold", 
-          color: "#333", 
-          fontSize: "16px" 
+        <p style={{
+          marginTop: "2rem",
+          fontWeight: "bold",
+          color: "#333",
+          fontSize: "16px"
         }}>
           {formattedDate}, {formattedTime}
         </p>
       </div>
 
-      {/* 🎁 Redeem Confirmation Modal */}
+      {/* Redeem Confirmation Modal */}
       <AlertModal
         isOpen={showRedeemModal}
         onClose={() => setShowRedeemModal(false)}
         onConfirm={handleConfirmRedeem}
         title="Redeem Gift"
-        message="Once you click confirm, please claim your reward at the booth immediately!"
+        message="Once you click confirm, please claim your reward at the booth immediately."
         confirmText="Redeem Now"
         cancelText="Cancel"
         type="warning"
-        icon="🎁"
       />
 
-      {/* ✅ Success Modal */}
+      {/* Success Modal */}
       <AlertModal
         isOpen={showSuccessModal}
         onClose={() => setShowSuccessModal(false)}
-        title="Success!"
-        message="Your gift has been marked as redeemed! Please head to the booth now."
-        confirmText="Got it!"
+        title="Success"
+        message="Your gift has been marked as redeemed. Please head to the booth now."
+        confirmText="Got it"
         type="success"
         showCancel={false}
       />
 
-      {/* ❌ Error Modal */}
+      {/* Error Modal */}
       <AlertModal
         isOpen={showErrorModal}
         onClose={() => setShowErrorModal(false)}

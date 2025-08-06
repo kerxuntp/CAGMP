@@ -45,7 +45,7 @@ const GetCollection = () => {
       }
     };
     if (id) fetchCollection();
-  }, [id, navigate]);
+  }, [fromPage, id, navigate]);
 
   useEffect(() => {
     if (!id || !selectedCollection) return;

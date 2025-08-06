@@ -1,18 +1,29 @@
 import React, { useState, useEffect, useRef } from "react";
 import AlertModal from './AlertModal';
+import Loading from './Loading';
 import "./MainStyles.css";
 import "./QuestionPage.css";
 
 const QuestionPage = () => {
+  // --- State and refs ---
   const [questions, setQuestions] = useState([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [correctAnswers, setCorrectAnswers] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(
+    parseInt(sessionStorage.getItem("currentQuestionIndex") || "0", 10)
+  );
+  const [correctAnswers, setCorrectAnswers] = useState(
+    parseInt(sessionStorage.getItem("correctAnswers") || "0", 10)
+  );
   const [userAnswer, setUserAnswer] = useState("");
-  const [hintsUsed, setHintsUsed] = useState(0);
-  const [elapsed, setElapsed] = useState(0);
+  const [hintsUsed, setHintsUsed] = useState(
+    parseInt(sessionStorage.getItem("hintsUsed") || "0", 10)
+  );
+  const [elapsed, setElapsed] = useState(
+    parseInt(sessionStorage.getItem("elapsed") || "0", 10)
+  );
   const [gameSettings, setGameSettings] = useState(null);
   const [timerPaused, setTimerPaused] = useState(false);
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   // Modal states
   const [showHintModal, setShowHintModal] = useState(false);
@@ -20,29 +31,58 @@ const QuestionPage = () => {
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showAnswerModal, setShowAnswerModal] = useState(false);
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
   const [infoMessage, setInfoMessage] = useState("");
   const [infoTitle, setInfoTitle] = useState("");
   const [infoType, setInfoType] = useState("info");
 
-  const startTime = useRef(Date.now());
-  const wrongAnswers = useRef(0);
-  const questionsSkipped = useRef(0);
-  const timePenalty = useRef(0);
-  const pausedTime = useRef(0);
+  // --- Refs for values not triggering re-render ---
+  const savedStartTime = sessionStorage.getItem("quizStartTime");
+  if (!savedStartTime) {
+    sessionStorage.setItem("quizStartTime", Date.now().toString());
+  }
+  const startTime = useRef(parseInt(sessionStorage.getItem("quizStartTime"), 10));
+  const wrongAnswers = useRef(
+    parseInt(sessionStorage.getItem("wrongAnswers") || "0", 10)
+  );
+  const questionsSkipped = useRef(
+    parseInt(sessionStorage.getItem("questionsSkipped") || "0", 10)
+  );
+  const timePenalty = useRef(
+    parseInt(sessionStorage.getItem("timePenalty") || "0", 10)
+  );
 
-  // Timer control functions
+  // --- Persist state/refs to sessionStorage ---
+  useEffect(() => {
+    sessionStorage.setItem("currentQuestionIndex", currentIndex.toString());
+  }, [currentIndex]);
+
+  useEffect(() => {
+    sessionStorage.setItem("correctAnswers", correctAnswers.toString());
+  }, [correctAnswers]);
+
+  useEffect(() => {
+    sessionStorage.setItem("hintsUsed", hintsUsed.toString());
+  }, [hintsUsed]);
+
+  useEffect(() => {
+    sessionStorage.setItem("elapsed", elapsed.toString());
+  }, [elapsed]);
+
+  // Persist refs when they change (manually after mutation)
+  const persistRefs = () => {
+    sessionStorage.setItem("wrongAnswers", wrongAnswers.current.toString());
+    sessionStorage.setItem("questionsSkipped", questionsSkipped.current.toString());
+    sessionStorage.setItem("timePenalty", timePenalty.current.toString());
+  };
+
+  // Timer control functions (manual pause/resume, not for tab inactivity)
   const pauseTimer = () => {
-    if (!timerPaused) {
-      setTimerPaused(true);
-      pausedTime.current += Date.now() - startTime.current;
-    }
+    setTimerPaused(true);
   };
 
   const resumeTimer = () => {
-    if (timerPaused) {
-      setTimerPaused(false);
-      startTime.current = Date.now();
-    }
+    setTimerPaused(false);
   };
 
   // Helper functions for modals
@@ -61,101 +101,125 @@ const QuestionPage = () => {
     pauseTimer();
   };
 
+  // --- Back Button Protection ---
   useEffect(() => {
-    const fetchQuestionsAndSettings = async () => {
-      const collectionId = sessionStorage.getItem("collectionId");
-      if (!collectionId) {
-        setError("No collection selected. Please enter a code or play as a guest.");
+    const handlePopState = (e) => {
+      e.preventDefault();
+      setShowLeaveModal(true);
+      window.history.pushState(null, "", window.location.href);
+    };
+    window.history.pushState(null, "", window.location.href);
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, []);
+
+  // --- Fetch Questions and Settings ---
+  async function fetchQuestionsAndSettings() {
+    const collectionId = sessionStorage.getItem("collectionId");
+    if (!collectionId) {
+      setError("No collection selected. Please enter a code or play as a guest.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // Fetch effective settings for this collection
+      const settingsResponse = await fetch(`http://localhost:5000/collections/${collectionId}/effective-settings`);
+      if (!settingsResponse.ok) {
+        const data = await settingsResponse.json();
+        setError(data.message || "Failed to load game settings.");
+        setLoading(false);
+        return;
+      }
+      const settingsData = await settingsResponse.json();
+      setGameSettings(settingsData);
+
+      // Fetch collection details to get the code
+      const collectionRes = await fetch(`http://localhost:5000/collections/${collectionId}`);
+      const collection = await collectionRes.json();
+
+      if (!collection) {
+        setError("Collection not found or is offline.");
+        setLoading(false);
         return;
       }
 
-      try {
-        // Fetch effective settings for this collection
-        const settingsResponse = await fetch(`http://localhost:5000/collections/${collectionId}/effective-settings`);
-        if (!settingsResponse.ok) {
-          const data = await settingsResponse.json();
-          setError(data.message || "Failed to load game settings.");
-          return;
-        }
-        const settingsData = await settingsResponse.json();
-        setGameSettings(settingsData);
-
-        // Fetch collection details to get the code
-        const collectionRes = await fetch(`http://localhost:5000/collections/${collectionId}`);
-        const collection = await collectionRes.json();
-
-        if (!collection) {
-          setError("Collection not found or is offline.");
-          return;
-        }
-
-        let fetchedQuestions = [];
-        if (collection.questionOrder && collection.questionOrder.length > 0) {
-          const response = await fetch(`http://localhost:5000/collections/${collection._id}/questions`);
-          if (!response.ok) {
-            const data = await response.json();
-            setError(data.message || "Failed to load questions.");
-            return;
-          }
+      let fetchedQuestions = [];
+      if (collection.questionOrder && collection.questionOrder.length > 0) {
+        const response = await fetch(`http://localhost:5000/collections/${collection._id}/questions`);
+        if (!response.ok) {
           const data = await response.json();
-          fetchedQuestions = Array.isArray(data) ? data : data.questions || [];
-        } else {
-          const res = await fetch(`http://localhost:5000/questions?collectionId=${collectionId}`);
-          if (!res.ok) {
-            const data = await res.json();
-            setError(data.message || "Failed to load questions.");
-            return;
-          }
+          setError(data.message || "Failed to load questions.");
+          setLoading(false);
+          return;
+        }
+        const data = await response.json();
+        fetchedQuestions = Array.isArray(data) ? data : data.questions || [];
+      } else {
+        const res = await fetch(`http://localhost:5000/questions?collectionId=${collectionId}`);
+        if (!res.ok) {
           const data = await res.json();
-          fetchedQuestions = data;
+          setError(data.message || "Failed to load questions.");
+          setLoading(false);
+          return;
         }
-
-        // Apply game mode randomization per-game
-        const playerIndex = parseInt(sessionStorage.getItem("playerIndex") || "0", 10);
-
-        if (settingsData && settingsData.gameMode === 'rotating') {
-          const n = fetchedQuestions.length;
-          const rotated = fetchedQuestions.map((_, i) => fetchedQuestions[(i + playerIndex) % n]);
-          setQuestions(rotated);
-        } else if (settingsData && settingsData.gameMode === 'rotating-reverse') {
-          const n = fetchedQuestions.length;
-          const rotated = fetchedQuestions.map((_, i) => fetchedQuestions[(i - playerIndex - 1 + n) % n]);
-          setQuestions(rotated);
-        } else if (settingsData && settingsData.gameMode === 'random') {
-          const shuffled = [...fetchedQuestions];
-          for (let i = shuffled.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-          }
-          setQuestions(shuffled);
-        } else {
-          setQuestions(fetchedQuestions);
-        }
-
-      } catch (error) {
-        console.error("Failed to fetch questions and settings:", error);
-        setError("Something went wrong. Please try again later.");
+        const data = await res.json();
+        fetchedQuestions = data;
       }
-    };
 
-    fetchQuestionsAndSettings();
-  }, []);
+      // Apply game mode randomization per-game
+      const playerIndex = parseInt(sessionStorage.getItem("playerIndex") || "0", 10);
 
-  // Timer effect
+      if (settingsData && settingsData.gameMode === 'rotating') {
+        const n = fetchedQuestions.length;
+        const rotated = fetchedQuestions.map((_, i) => fetchedQuestions[(i + playerIndex) % n]);
+        setQuestions(rotated);
+      } else if (settingsData && settingsData.gameMode === 'rotating-reverse') {
+        const n = fetchedQuestions.length;
+        const rotated = fetchedQuestions.map((_, i) => fetchedQuestions[(i - playerIndex - 1 + n) % n]);
+        setQuestions(rotated);
+      } else if (settingsData && settingsData.gameMode === 'random') {
+        const shuffled = [...fetchedQuestions];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        setQuestions(shuffled);
+      } else {
+        setQuestions(fetchedQuestions);
+      }
+
+      setLoading(false);
+    } catch (error) {
+      console.error("Failed to fetch questions and settings:", error);
+      setError("Something went wrong. Please try again later.");
+      setLoading(false);
+    }
+  }
+
+  // Timer effect: always uses real time since start, plus penalties
   useEffect(() => {
     const interval = setInterval(() => {
       if (!timerPaused) {
         const now = Date.now();
-        setElapsed(Math.floor((now - startTime.current - pausedTime.current) / 1000) + timePenalty.current);
+        const newElapsed = Math.max(0, Math.floor((now - startTime.current) / 1000) + timePenalty.current);
+        setElapsed(newElapsed);
       }
     }, 1000);
     return () => clearInterval(interval);
   }, [timerPaused]);
 
+  // --- Persist refs after mutation ---
+  // Call persistRefs() after any mutation to wrongAnswers, questionsSkipped, or timePenalty
+
   const formatTime = (seconds) => {
-    const hours = String(Math.floor(seconds / 3600)).padStart(2, "0");
-    const mins = String(Math.floor((seconds % 3600) / 60)).padStart(2, "0");
-    const secs = String(seconds % 60).padStart(2, "0");
+    const safeSeconds = Math.max(0, seconds);
+    const hours = String(Math.floor(safeSeconds / 3600)).padStart(2, "0");
+    const mins = String(Math.floor((safeSeconds % 3600) / 60)).padStart(2, "0");
+    const secs = String(safeSeconds % 60).padStart(2, "0");
     return `${hours}:${mins}:${secs}`;
   };
 
@@ -186,8 +250,13 @@ const QuestionPage = () => {
 
   const confirmHint = () => {
     const hint = questions[currentIndex]?.hint;
-    setHintsUsed((prev) => prev + 1);
+    setHintsUsed((prev) => {
+      const newVal = prev + 1;
+      sessionStorage.setItem("hintsUsed", newVal.toString());
+      return newVal;
+    });
     timePenalty.current += gameSettings.hintPenalty;
+    persistRefs();
     showInfo("💡 Hint", hint, "info");
   };
 
@@ -216,13 +285,18 @@ const QuestionPage = () => {
 
 
     if (isCorrect) {
-      setCorrectAnswers((prev) => prev + 1);
+      setCorrectAnswers((prev) => {
+        const newVal = prev + 1;
+        sessionStorage.setItem("correctAnswers", newVal.toString());
+        return newVal;
+      });
       setUserAnswer("");
       const funFact = questions[currentIndex].funFact || "No fun fact available.";
       showAnswerInfo("Correct!", funFact, "success");
     } else {
       wrongAnswers.current += 1;
       timePenalty.current += gameSettings.wrongAnswerPenalty;
+      persistRefs();
       setUserAnswer("");
       showAnswerInfo("Incorrect", "Try again! You can still answer this question.", "error");
     }
@@ -236,6 +310,7 @@ const QuestionPage = () => {
   const confirmSkip = () => {
     timePenalty.current += gameSettings.skipPenalty;
     questionsSkipped.current += 1;
+    persistRefs();
     setUserAnswer("");
     const currentQuestion = questions[currentIndex];
     const correctAnswer = Array.isArray(currentQuestion.answer)
@@ -259,7 +334,11 @@ const QuestionPage = () => {
       } else {
         animateAirplaneMovement();
         setTimeout(() => {
-          setCurrentIndex((prev) => prev + 1);
+          setCurrentIndex((prev) => {
+            const nextIndex = prev + 1;
+            sessionStorage.setItem("currentQuestionIndex", nextIndex.toString());
+            return nextIndex;
+          });
         }, 600);
       }
     }
@@ -267,8 +346,8 @@ const QuestionPage = () => {
 
   const handleFinish = async (answeredLast) => {
     const finalCorrect = correctAnswers + (answeredLast ? 1 : 0);
-    const rawTime = Math.floor((Date.now() - startTime.current - pausedTime.current) / 1000);
-    const finalTime = rawTime + timePenalty.current;
+    const rawTime = Math.floor((Date.now() - startTime.current) / 1000);
+    const finalTime = Math.max(0, rawTime + timePenalty.current);
 
     showInfo("🎊 Quiz Complete!", "Great job! Redirecting to results...", "success");
 
@@ -298,10 +377,25 @@ const QuestionPage = () => {
     sessionStorage.setItem("correctAnswers", finalCorrect.toString());
     sessionStorage.setItem("totalQuestions", questions.length.toString());
 
+    // Clear progress-related sessionStorage keys
+    sessionStorage.removeItem("currentQuestionIndex");
+    sessionStorage.removeItem("elapsed");
+    sessionStorage.removeItem("hintsUsed");
+    sessionStorage.removeItem("wrongAnswers");
+    sessionStorage.removeItem("questionsSkipped");
+    sessionStorage.removeItem("timePenalty");
+    sessionStorage.removeItem("quizStartTime"); 
+
     setTimeout(() => {
       window.location.href = "/results";
     }, 2000);
   };
+
+  // --- Fetch questions on mount ---
+  useEffect(() => {
+    fetchQuestionsAndSettings();
+    // eslint-disable-next-line
+  }, []);
 
   // Handle error state
   if (error) {
@@ -320,10 +414,47 @@ const QuestionPage = () => {
     );
   }
 
-  if (questions.length === 0 || !gameSettings) {
+  if (showLeaveModal) {
+    return (
+      <AlertModal
+        isOpen={showLeaveModal}
+        onClose={() => setShowLeaveModal(false)}
+        onConfirm={async () => {
+          const playerId = sessionStorage.getItem("playerId");
+          if (playerId) {
+              await fetch(`http://localhost:5000/players/${playerId}`, {
+                method: "DELETE",
+              });
+          }
+          sessionStorage.removeItem("gameState");
+          sessionStorage.removeItem("playerId");
+          sessionStorage.removeItem("playerIndex");
+          sessionStorage.removeItem("collectionId");
+          sessionStorage.removeItem("correctAnswers");
+          sessionStorage.removeItem("totalQuestions");
+          sessionStorage.removeItem("currentQuestionIndex");
+          sessionStorage.removeItem("elapsed");
+          sessionStorage.removeItem("hintsUsed");
+          sessionStorage.removeItem("wrongAnswers");
+          sessionStorage.removeItem("questionsSkipped");
+          sessionStorage.removeItem("timePenalty");
+          sessionStorage.removeItem("quizStartTime");
+          window.location.href = "/";
+        }}
+        title="Leave Game?"
+        message="Leaving this page will end your quiz progress. Are you sure?"
+        confirmText="Leave"
+        cancelText="Stay"
+        type="warning"
+        showCancel={true}
+      />
+    );
+  }
+
+  if (loading || questions.length === 0 || !gameSettings) {
     return (
       <div className="game-page-wrapper">
-        <div className="game-loading">Loading questions...</div>
+        <Loading />
       </div>
     );
   }
@@ -331,7 +462,7 @@ const QuestionPage = () => {
   if (!questions[currentIndex]) {
     return (
       <div className="game-page-wrapper">
-        <div className="game-loading">Loading question...</div>
+        <Loading />
       </div>
     );
   }
@@ -341,6 +472,14 @@ const QuestionPage = () => {
     skip: formatPenaltyTime(gameSettings.skipPenalty),
     wrong: formatPenaltyTime(gameSettings.wrongAnswerPenalty)
   } : { hint: "", skip: "", wrong: "" };
+
+  const formatPenaltyShort = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    if (mins > 0 && secs > 0) return `${mins}m ${secs}s`;
+    if (mins > 0) return `${mins}m`;
+    return `${secs}s`;
+  };
 
   return (
     <div className="game-page-wrapper">
@@ -404,7 +543,6 @@ const QuestionPage = () => {
       </div>
 
       {/* Answer input */}
-      {/* Answer Section: MCQ vs Open-ended */}
       <div className="game-answer-section">
         {questions[currentIndex].type === "mcq" ? (
           <div className="game-mcq-options">
@@ -438,13 +576,13 @@ const QuestionPage = () => {
           onClick={handleHintClick}
           className="game-hint-button"
         >
-          Hint (-{Math.floor(gameSettings.hintPenalty / 60)} min)
+          Hint (+{formatPenaltyShort(gameSettings.hintPenalty)})
         </button>
         <button
           onClick={handleSkip}
           className="game-skip-button"
         >
-          Skip (-{Math.floor(gameSettings.skipPenalty / 60)} min)
+          Skip (+{formatPenaltyShort(gameSettings.skipPenalty)})
         </button>
       </div>
 

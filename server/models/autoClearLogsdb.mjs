@@ -25,7 +25,7 @@ const AutoClearLogSchema = new mongoose.Schema({
     end: Date,
   },
   clearedCount: Number,
-  clearedIds: [mongoose.Schema.Types.ObjectId], // optional: if you want to track which documents were deleted
+  clearedIds: [mongoose.Schema.Types.ObjectId],
 }, {
   timestamps: true,
 });
