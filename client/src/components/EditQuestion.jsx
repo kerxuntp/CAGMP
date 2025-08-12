@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import AlertModal from "./AlertModal";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 import "./MainStyles.css";
 
 const EditQuestion = () => {
@@ -57,7 +58,7 @@ const EditQuestion = () => {
 
     (async () => {
       try {
-        const res = await fetch("http://localhost:5000/collections/");
+        const res = await fetch(`${API_BASE_URL}/collections/`);
         const data = await res.json();
         const target = data.find((c) => c._id === collectionId);
         if (target) setCollectionName(target.name);
@@ -71,7 +72,7 @@ const EditQuestion = () => {
 
     (async () => {
       try {
-        const res = await fetch(`http://localhost:5000/questions/${number}/${collectionId}`);
+        const res = await fetch(`${API_BASE_URL}/questions/${number}/${collectionId}`);
         if (!res.ok) throw new Error();
         const { data } = await res.json();
         setQuestion(data.question);
@@ -300,7 +301,7 @@ const EditQuestion = () => {
 
     try {
       const res = await fetch(
-        `http://localhost:5000/questions/${number}/${collectionId}`,
+        `${API_BASE_URL}/questions/${number}/${collectionId}`,
         { method: "PATCH", body: formData }
       );
       if (res.ok) {

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./GlobalSettings.css";
 import AlertModal from "./AlertModal";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 const GlobalSettings = () => {
   const [settings, setSettings] = useState({
@@ -33,7 +34,7 @@ const GlobalSettings = () => {
 
   const fetchGlobalSettings = async () => {
     try {
-      const response = await fetch("http://localhost:5000/global-settings");
+      const response = await fetch(`${API_BASE_URL}/global-settings`);
       const data = await response.json();
       setSettings(data);
     } catch {
@@ -73,7 +74,7 @@ const GlobalSettings = () => {
   // Actually save after confirmation
   const confirmSave = async () => {
     try {
-      const response = await fetch("http://localhost:5000/global-settings", {
+      const response = await fetch(`${API_BASE_URL}/global-settings`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(settings),

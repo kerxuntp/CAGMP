@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import './MainStyles.css';
 import './LeaderboardStyles.css'; 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 const FILTERS = [
   { label: "Today", value: "day" },
@@ -45,16 +46,16 @@ export default function LeaderboardPage() {
           return;
         }
 
-        const currentPlayerRes = await fetch(`http://localhost:5000/players/${currentPlayerId}`);
+        const currentPlayerRes = await fetch(`${API_BASE_URL}/players/${currentPlayerId}`);
         const currentPlayerData = await currentPlayerRes.json();
         setCurrentPlayer(currentPlayerData);
 
         // Get all players and collections
         const [playersRes, collectionsRes] = await Promise.all([
-          fetch("http://localhost:5000/players"),
-          fetch("http://localhost:5000/collections"),
+          fetch(`${API_BASE_URL}/players`),
+          fetch(`${API_BASE_URL}/collections`),
         ]);
-        
+
         const [playersData, collectionsData] = await Promise.all([
           playersRes.json(),
           collectionsRes.json(),

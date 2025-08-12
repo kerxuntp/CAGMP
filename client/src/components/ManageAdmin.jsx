@@ -5,6 +5,7 @@ import "./MainStyles.css";
 import AlertModal from "./AlertModal";
 
 const ManageAdmin = () => {
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
   const [admins, setAdmins] = useState([]);
   const [newUsername, setNewUsername] = useState("");
   const [newEmail, setNewEmail] = useState("");
@@ -64,7 +65,7 @@ const ManageAdmin = () => {
 
   const fetchAdmins = async () => {
     try {
-      const res = await fetch("http://localhost:5000/admins/", {
+      const res = await fetch(`${baseUrl}/admins/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -85,7 +86,7 @@ const ManageAdmin = () => {
     }
 
     setLoading(true);
-    const res = await fetch("http://localhost:5000/admins/register", {
+    const res = await fetch(`${baseUrl}/admins/register`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -112,7 +113,7 @@ const ManageAdmin = () => {
       message: "Are you sure you want to delete this admin?",
       type: "warning",
       onConfirm: async () => {
-        const res = await fetch(`http://localhost:5000/admins/${id}`, {
+        const res = await fetch(`${baseUrl}/admins/${id}`, {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -129,7 +130,7 @@ const ManageAdmin = () => {
       message: "Transfer main admin role to this user?",
       type: "warning",
       onConfirm: async () => {
-        const res = await fetch(`http://localhost:5000/admins/transfer-role/${id}`, {
+        const res = await fetch(`${baseUrl}/admins/transfer-role/${id}`, {
           method: "PATCH",
           headers: { Authorization: `Bearer ${token}` },
         });

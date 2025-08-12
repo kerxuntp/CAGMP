@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 
 const QuestionOrderModal = ({ collection, questions, setQuestions, onModalFeedback }) => {
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
   const [showModal, setShowModal] = useState(false);
   const [orderedQuestions, setOrderedQuestions] = useState([]);
 
@@ -31,7 +32,7 @@ const QuestionOrderModal = ({ collection, questions, setQuestions, onModalFeedba
     try {
       const ids = orderedQuestions.map((q) => q._id);
       const res = await fetch(
-        `http://localhost:5000/collections/${collection._id}/question-order`,
+        `${baseUrl}/collections/${collection._id}/question-order`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -42,7 +43,7 @@ const QuestionOrderModal = ({ collection, questions, setQuestions, onModalFeedba
         onModalFeedback?.("Success", "Question order updated successfully!", "success");
         setShowModal(false);
         // Refresh questions
-        const refreshed = await fetch(`http://localhost:5000/collections/${collection._id}/questions`);
+        const refreshed = await fetch(`${baseUrl}/collections/${collection._id}/questions`);
         const data = await refreshed.json();
         setQuestions(Array.isArray(data) ? data : data.questions || []);
       } else {

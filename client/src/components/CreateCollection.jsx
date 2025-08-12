@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import AlertModal from "./AlertModal";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 import "./MainStyles.css";
 
 const CreateCollection = () => {
@@ -44,7 +45,7 @@ const CreateCollection = () => {
   useEffect(() => {
     const checkPublicCollection = async () => {
       try {
-        const res = await fetch("http://localhost:5000/collections");
+        const res = await fetch(`${API_BASE_URL}/collections`);
         const data = await res.json();
         const publicCol = data.find((c) => c.isPublic && c.isOnline);
         setExistingPublicCollection(publicCol || null);
@@ -109,7 +110,7 @@ const CreateCollection = () => {
 
   const submitCollection = async () => {
     try {
-      const res = await fetch("http://localhost:5000/collections", {
+      const res = await fetch(`${API_BASE_URL}/collections`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

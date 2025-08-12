@@ -169,4 +169,4 @@ setInterval(async () => {
   } catch (err) {
     console.error("[AUTO CLEAR ERROR]", err);
   }
-}, 10 * 1000); // Check every 10 seconds for testing
+}, 10 * 1000); // Every 10 seconds

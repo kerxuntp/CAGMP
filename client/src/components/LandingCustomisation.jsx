@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import './LandingCustomisation.css';
 import AlertModal from './AlertModal';
 import LivePreview from './LivePreview';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 const DEFAULT_BG = '/images/changihome.jpg';
 
@@ -38,31 +39,31 @@ const LandingCustomisation = () => {
 
   const fetchSettings = async () => {
     try {
-      const response = await fetch('http://localhost:5000/landing-customisation');
+      const response = await fetch(`${API_BASE_URL}/landing-customisation`);
       const data = await response.json();
       setSettings(data);
 
       setWelcomeMessage(data.welcomeMessage);
       setDescription(data.description);
-  setTextColor(data.titleColor || '#000000');
-  if (data.buttonGradient && typeof data.buttonGradient === 'string' && data.buttonGradient.startsWith('linear-gradient')) {
-    setButtonGradient(data.buttonGradient);
-    // Try to parse colors and direction from the gradient string
-    const match = data.buttonGradient.match(/linear-gradient\(([^,]+),\s*([^,]+),\s*([^\)]+)\)/);
-    if (match) {
-      setGradientDirection(match[1].trim());
-      setGradientStart(match[2].trim());
-      setGradientEnd(match[3].trim());
-    }
-  } else {
-    setButtonGradient(DEFAULT_GRADIENT);
-    setGradientStart('#c4ec1b');
-    setGradientEnd('#00c4cc');
-    setGradientDirection('to right');
-  }
-  setButtonTextColor(data.buttonTextColor || '#000000');
-  setBackgroundImage(null); // Don't set file, just reset
-  setShowLogo(data.showLogo !== false);
+      setTextColor(data.titleColor || '#000000');
+      if (data.buttonGradient && typeof data.buttonGradient === 'string' && data.buttonGradient.startsWith('linear-gradient')) {
+        setButtonGradient(data.buttonGradient);
+        // Try to parse colors and direction from the gradient string
+        const match = data.buttonGradient.match(/linear-gradient\(([^,]+),\s*([^,]+),\s*([^\)]+)\)/);
+        if (match) {
+          setGradientDirection(match[1].trim());
+          setGradientStart(match[2].trim());
+          setGradientEnd(match[3].trim());
+        }
+      } else {
+        setButtonGradient(DEFAULT_GRADIENT);
+        setGradientStart('#c4ec1b');
+        setGradientEnd('#00c4cc');
+        setGradientDirection('to right');
+      }
+      setButtonTextColor(data.buttonTextColor || '#000000');
+      setBackgroundImage(null); 
+      setShowLogo(data.showLogo !== false);
     } catch {
       setModalTitle('Error');
       setModalMessage('Failed to fetch landing page settings.');
@@ -105,7 +106,7 @@ const LandingCustomisation = () => {
       formData.append('buttonGradient', composedGradient);
       formData.append('buttonTextColor', buttonTextColor);
 
-      const response = await fetch('http://localhost:5000/landing-customisation', {
+      const response = await fetch(`${API_BASE_URL}/landing-customisation`, {
         method: 'POST',
         body: formData
       });
@@ -148,24 +149,24 @@ const LandingCustomisation = () => {
 
   const confirmReset = async () => {
     try {
-      const response = await fetch('http://localhost:5000/landing-customisation/reset', {
+      const response = await fetch(`${API_BASE_URL}/landing-customisation/reset`, {
         method: 'DELETE'
       });
 
       if (response.ok) {
-  setWelcomeMessage('Welcome To GoChangi!');
-  setDescription('Discover Changi, One Clue at a Time!');
-  setTextColor('#000000');
-  setButtonTextColor('#000000');
-  setButtonGradient(DEFAULT_GRADIENT);
-  setGradientStart('#c4ec1b');
-  setGradientEnd('#00c4cc');
-  setGradientDirection('to right');
-  setBackgroundImage(null);
-  setSettings({ backgroundImage: DEFAULT_BG, showLogo: true, buttonTextColor: '#000000' });
-  setModalTitle('Success');
-  setModalMessage('Settings reset successfully!');
-  setShowSuccessModal(true);
+        setWelcomeMessage('Welcome To GoChangi!');
+        setDescription('Discover Changi, One Clue at a Time!');
+        setTextColor('#000000');
+        setButtonTextColor('#000000');
+        setButtonGradient(DEFAULT_GRADIENT);
+        setGradientStart('#c4ec1b');
+        setGradientEnd('#00c4cc');
+        setGradientDirection('to right');
+        setBackgroundImage(null);
+        setSettings({ backgroundImage: DEFAULT_BG, showLogo: true, buttonTextColor: '#000000' });
+        setModalTitle('Success');
+        setModalMessage('Settings reset successfully!');
+        setShowSuccessModal(true);
       } else {
         setModalTitle('Error');
         setModalMessage('Error resetting settings.');

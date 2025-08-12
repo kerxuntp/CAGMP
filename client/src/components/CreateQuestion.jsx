@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AlertModal from "./AlertModal";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 import "./MainStyles.css";
 
 const CreateQuestion = () => {
@@ -37,7 +38,7 @@ const CreateQuestion = () => {
     }
     const fetchCollections = async () => {
       try {
-        const response = await fetch("http://localhost:5000/collections/");
+        const response = await fetch(`${API_BASE_URL}/collections/`);
         const data = await response.json();
         setCollections(data);
       } catch {
@@ -75,7 +76,7 @@ const CreateQuestion = () => {
 
   try {
     // Fetch all existing questions to check duplicates
-    const allRes = await fetch("http://localhost:5000/questions");
+    const allRes = await fetch(`${API_BASE_URL}/questions`);
     const allQuestions = await allRes.json();
     const exists = allQuestions.some(
       (q) => q.number === parseInt(number) && q.collectionId === collectionId
@@ -137,7 +138,7 @@ const CreateQuestion = () => {
 
     if (image) formData.append("image", image);
 
-    const response = await fetch("http://localhost:5000/questions", {
+    const response = await fetch(`${API_BASE_URL}/questions`, {
       method: "POST",
       body: formData,
     });

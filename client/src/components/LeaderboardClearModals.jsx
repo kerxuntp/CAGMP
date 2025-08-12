@@ -46,11 +46,13 @@ export function ManualClearModal({ isOpen, manualRange, setManualRange, manualCo
 export function AutoClearModal({ isOpen, autoClear, tempAuto, setTempAuto, onConfirm, onClose, onDelete, collectionName }) {
   if (!isOpen) return null;
 
-  const isCustomIntervalInvalid =
-    tempAuto.interval === "custom" && (!tempAuto.customIntervalValue || !tempAuto.customIntervalUnit);
+  // Only allow 'custom' target when interval is 'custom'
+  const isCustomInterval = tempAuto.interval === "custom";
+  const isCustomIntervalInvalid = isCustomInterval && (!tempAuto.customIntervalValue || !tempAuto.customIntervalUnit);
+  const isCustomRange = isCustomInterval && tempAuto.target === "custom";
   const isSaveDisabled =
-    (tempAuto.target === "custom" && (!tempAuto.startDate || !tempAuto.endDate)) ||
-    isCustomIntervalInvalid;
+    isCustomIntervalInvalid ||
+    (isCustomRange && (!tempAuto.startDate || !tempAuto.endDate));
 
   const availableIntervals = [
     { label: "Daily", value: "day" },
@@ -189,12 +191,14 @@ export function AutoClearModal({ isOpen, autoClear, tempAuto, setTempAuto, onCon
             <label style={{ color: "black", fontWeight: "bold" }}>Data to Clear:</label>
             <select
               value={tempAuto.target}
-              onChange={(e) => setTempAuto((t) => ({ 
-                ...t, 
-                target: e.target.value,
-                startDate: e.target.value === "custom" ? t.startDate || new Date().toISOString().slice(0, 10) : null,
-                endDate: e.target.value === "custom" ? t.endDate || new Date().toISOString().slice(0, 10) : null,
-              }))}
+              onChange={(e) => {
+                setTempAuto((t) => ({
+                  ...t,
+                  target: e.target.value,
+                  startDate: e.target.value === "custom" ? t.startDate || new Date().toISOString().slice(0, 10) : null,
+                  endDate: e.target.value === "custom" ? t.endDate || new Date().toISOString().slice(0, 10) : null,
+                }));
+              }}
               style={{ width: "100%", padding: "5px" }}
             >
               <option value="today">Today</option>
@@ -216,7 +220,7 @@ export function AutoClearModal({ isOpen, autoClear, tempAuto, setTempAuto, onCon
                   type="date"
                   value={tempAuto.startDate?.slice(0, 10) || ""}
                   onChange={(e) => setTempAuto((t) => ({ ...t, startDate: e.target.value }))}
-                  style={{ color: "black", padding: "5px" }}
+                  style={{ color: "white", padding: "5px" }}
                 />
               </div>
               <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
@@ -225,7 +229,7 @@ export function AutoClearModal({ isOpen, autoClear, tempAuto, setTempAuto, onCon
                   type="date"
                   value={tempAuto.endDate?.slice(0, 10) || ""}
                   onChange={(e) => setTempAuto((t) => ({ ...t, endDate: e.target.value }))}
-                  style={{ color: "black", padding: "5px" }}
+                  style={{ color: "white", padding: "5px" }}
                 />
               </div>
             </div>

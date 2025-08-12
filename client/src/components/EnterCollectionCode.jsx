@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AlertModal from './AlertModal';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 import "./MainStyles.css";
 
 export default function EnterCollCode() {
@@ -23,7 +24,7 @@ export default function EnterCollCode() {
     }
 
     try {
-      const res = await fetch(`http://localhost:5000/collections/code/${code.trim()}`);
+      const res = await fetch(`${API_BASE_URL}/collections/code/${code.trim()}`);
 
       if (!res.ok) {
         showError("Invalid code. Please check with the staff.");
@@ -42,7 +43,7 @@ export default function EnterCollCode() {
 
   const handlePublicPlay = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/collections/public`);
+      const res = await fetch(`${API_BASE_URL}/collections/public`);
 
       if (!res.ok) {
         showError("Public game is currently unavailable.");

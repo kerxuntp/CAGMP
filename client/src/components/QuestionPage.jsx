@@ -5,6 +5,7 @@ import "./MainStyles.css";
 import "./QuestionPage.css";
 
 const QuestionPage = () => {
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
   // --- State and refs ---
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(
@@ -127,7 +128,7 @@ const QuestionPage = () => {
 
     try {
       // Fetch effective settings for this collection
-      const settingsResponse = await fetch(`http://localhost:5000/collections/${collectionId}/effective-settings`);
+      const settingsResponse = await fetch(`${baseUrl}/collections/${collectionId}/effective-settings`);
       if (!settingsResponse.ok) {
         const data = await settingsResponse.json();
         setError(data.message || "Failed to load game settings.");
@@ -138,7 +139,7 @@ const QuestionPage = () => {
       setGameSettings(settingsData);
 
       // Fetch collection details to get the code
-      const collectionRes = await fetch(`http://localhost:5000/collections/${collectionId}`);
+      const collectionRes = await fetch(`${baseUrl}/collections/${collectionId}`);
       const collection = await collectionRes.json();
 
       if (!collection) {
@@ -149,7 +150,7 @@ const QuestionPage = () => {
 
       let fetchedQuestions = [];
       if (collection.questionOrder && collection.questionOrder.length > 0) {
-        const response = await fetch(`http://localhost:5000/collections/${collection._id}/questions`);
+        const response = await fetch(`${baseUrl}/collections/${collection._id}/questions`);
         if (!response.ok) {
           const data = await response.json();
           setError(data.message || "Failed to load questions.");
@@ -159,7 +160,7 @@ const QuestionPage = () => {
         const data = await response.json();
         fetchedQuestions = Array.isArray(data) ? data : data.questions || [];
       } else {
-        const res = await fetch(`http://localhost:5000/questions?collectionId=${collectionId}`);
+        const res = await fetch(`${baseUrl}/questions?collectionId=${collectionId}`);
         if (!res.ok) {
           const data = await res.json();
           setError(data.message || "Failed to load questions.");
@@ -356,7 +357,7 @@ const QuestionPage = () => {
 
     if (playerId) {
       try {
-        await fetch(`http://localhost:5000/players/${playerId}`, {
+        await fetch(`${baseUrl}/players/${playerId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -422,7 +423,7 @@ const QuestionPage = () => {
         onConfirm={async () => {
           const playerId = sessionStorage.getItem("playerId");
           if (playerId) {
-              await fetch(`http://localhost:5000/players/${playerId}`, {
+              await fetch(`${baseUrl}/players/${playerId}`, {
                 method: "DELETE",
               });
           }
@@ -528,7 +529,7 @@ const QuestionPage = () => {
 
         {questions[currentIndex].image && (
           <img
-            src={`http://localhost:5000/${questions[currentIndex].image}`}
+            src={`${baseUrl}/${questions[currentIndex].image}`}
             alt={`Question ${currentIndex + 1}`}
             style={{
               maxWidth: "90%",

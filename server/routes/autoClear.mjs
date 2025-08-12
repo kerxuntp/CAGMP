@@ -20,52 +20,55 @@ router.post('/:collectionId', async (req, res) => {
   const { collectionId } = req.params;
   const { interval, target, clearTime, startDate, endDate, customIntervalValue, customIntervalUnit } = req.body;
 
-  // Only allow matching interval and target
-  const validPairs = {
-    day: "today",
-    week: "week",
-    month: "month",
-    custom: "custom",
+  // Validation
+  const validIntervals = ['day', 'week', 'month', 'custom'];
+  const validTargets = ['today', 'week', 'month', 'custom', 'all'];
+  if (!validIntervals.includes(interval)) {
+    return res.status(400).send('Invalid interval');
+  }
+  if (!validTargets.includes(target)) {
+    return res.status(400).send('Invalid target');
+  }
+
+  // For day/week/month, target must match interval
+  if (interval === 'day' && target !== 'today') {
+    return res.status(400).send('For daily clears, target must be "today"');
+  }
+  if (interval === 'week' && target !== 'week') {
+    return res.status(400).send('For weekly clears, target must be "week"');
+  }
+  if (interval === 'month' && target !== 'month') {
+    return res.status(400).send('For monthly clears, target must be "month"');
+  }
+
+  // For custom interval, allow any target
+  if (interval === 'custom') {
+    if (!customIntervalValue || !customIntervalUnit) {
+      return res.status(400).send('Custom interval value and unit required');
+    }
+    if (target === 'custom' && (!startDate || !endDate)) {
+      return res.status(400).send('Start and end dates required for custom target');
+    }
+  }
+
+  // Build update object
+  const update = {
+    interval,
+    target,
+    clearTime: clearTime || '00:00',
+    startDate: target === 'custom' ? startDate : null,
+    endDate: target === 'custom' ? endDate : null,
+    customIntervalValue: interval === 'custom' ? Number(customIntervalValue) : null,
+    customIntervalUnit: interval === 'custom' ? customIntervalUnit : null,
   };
-  if (validPairs[interval] !== target) {
-    return res.status(400).send("Frequency and data range must match.");
-  }
-
-
-  // Validate target based on interval
-  const validTargets = {
-    day: ['today', 'custom', 'all'],
-    week: ['today', 'week', 'custom', 'all'],
-    month: ['today', 'week', 'month', 'custom', 'all'],
-    custom: ['today', 'week', 'month', 'all'],
-  };
-  if (!validTargets[interval].includes(target)) {
-    return res.status(400).send(`Invalid target for interval ${interval}`);
-  }
-
-  // Validate required fields
-  if (target === 'custom' && (!startDate || !endDate)) {
-    return res.status(400).send("Start and end dates required for custom target");
-  }
-  if (interval === 'custom' && (!customIntervalValue || !customIntervalUnit)) {
-    return res.status(400).send("Custom interval value and unit required for custom interval");
-  }
 
   try {
     const config = await AutoClearConfig.findOneAndUpdate(
       { collectionId },
-      { 
-        interval, 
-        target, 
-        clearTime: clearTime || "00:00",
-        startDate: interval === 'custom' ? startDate : null, 
-        endDate: interval === 'custom' ? endDate : null, 
-        customIntervalValue: interval === 'custom' ? Number(customIntervalValue) : null, 
-        customIntervalUnit: interval === 'custom' ? customIntervalUnit : null 
-      },
+      update,
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
-    res.status(200).json({ message: "Config saved", config });
+    res.status(200).json({ message: 'Config saved', config });
   } catch (err) {
     res.status(500).json({ message: 'Failed to save config', error: err.message });
   }

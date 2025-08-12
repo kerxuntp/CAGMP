@@ -38,7 +38,7 @@ export default function ResultPage() {
     // Fetch player info from backend
     const fetchPlayer = async () => {
       try {
-        const res = await fetch(`http://localhost:5000/players/${playerId}`);
+          const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/players/${playerId}`);
         if (!res.ok) throw new Error("Player not found");
         const data = await res.json();
         setPlayer(data);
@@ -86,7 +86,7 @@ export default function ResultPage() {
   // PATCH request to backend to mark player as redeemed
   const handleConfirmRedeem = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/players/${player._id}`, {
+        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/players/${player._id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...player, redeemed: true }),

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import AlertModal from "./AlertModal";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 import "./MainStyles.css";
 
 const EditCollection = () => {
@@ -46,7 +47,7 @@ const EditCollection = () => {
   useEffect(() => {
     const fetchCollection = async () => {
       try {
-        const res = await fetch(`http://localhost:5000/collections/${id}`);
+        const res = await fetch(`${API_BASE_URL}/collections/${id}`);
         const data = await res.json();
         setName(data.name);
         setCode(data.code);
@@ -54,7 +55,7 @@ const EditCollection = () => {
         setIsOnline(data.isOnline);
         setPrevIsPublic(data.isPublic);
         setPrevIsOnline(data.isOnline);
-        setWelcomeMessage(data.welcomeMessage || ""); // <-- NEW
+        setWelcomeMessage(data.welcomeMessage || "");
       } catch {
         console.error("Failed to load collection");
       }
@@ -62,7 +63,7 @@ const EditCollection = () => {
 
     const checkPublicCollection = async () => {
       try {
-        const res = await fetch("http://localhost:5000/collections");
+        const res = await fetch(`${API_BASE_URL}/collections`);
         const data = await res.json();
         const publicCol = data.find((c) => c.isPublic && c.isOnline && c._id !== id);
         setExistingPublicCollection(publicCol || null);
@@ -130,7 +131,7 @@ const EditCollection = () => {
 
   const submitCollection = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/collections/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/collections/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -138,7 +139,7 @@ const EditCollection = () => {
           code: isPublic ? undefined : code,
           isPublic,
           isOnline,
-          welcomeMessage, // <-- NEW
+          welcomeMessage,
         }),
       });
       if (res.ok) {
@@ -225,7 +226,7 @@ const EditCollection = () => {
 
   const confirmDelete = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/collections/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/collections/${id}`, {
         method: "DELETE",
       });
       if (res.ok) {

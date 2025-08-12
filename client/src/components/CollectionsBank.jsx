@@ -5,6 +5,8 @@ import Loading from './Loading';
 import './Questions.css';
 import './MainStyles.css';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+
 const CollectionsBank = () => {
   const [collections, setCollections] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,7 +37,7 @@ const CollectionsBank = () => {
     const fetchCollections = async () => {
       try {
         setIsLoading(true);
-        const res = await fetch('http://localhost:5000/collections/');
+  const res = await fetch(`${API_BASE_URL}/collections/`);
         const data = await res.json();
         console.log('Fetched collections:', data); // Debug
         // Sort collections based on sortOption
@@ -67,7 +69,7 @@ const CollectionsBank = () => {
   // Delete logic
   const confirmDelete = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/collections/${deleteTargetId}`, {
+      const res = await fetch(`${API_BASE_URL}/collections/${deleteTargetId}`, {
         method: 'DELETE',
       });
       if (res.ok) {

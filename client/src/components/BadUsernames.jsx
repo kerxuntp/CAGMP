@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import "./MainStyles.css";
 import AlertModal from "./AlertModal";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+
 const BadUsernames = () => {
   const [badUsernames, setBadUsernames] = useState([]);
   const [newUsername, setNewUsername] = useState("");
@@ -36,7 +38,7 @@ const BadUsernames = () => {
 
   const fetchBadUsernames = async () => {
     try {
-      const response = await fetch("http://localhost:5000/bad-usernames");
+      const response = await fetch(`${API_BASE_URL}/bad-usernames`);
       const data = await response.json();
       setBadUsernames(data);
     } catch (error) {
@@ -61,7 +63,7 @@ const BadUsernames = () => {
 
     let failed = [];
     for (const username of usernamesToAdd) {
-      const response = await fetch("http://localhost:5000/bad-usernames", {
+      const response = await fetch(`${API_BASE_URL}/bad-usernames`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username }),
@@ -110,7 +112,7 @@ const BadUsernames = () => {
 
   const confirmBulkUpdate = async () => {
     try {
-      const response = await fetch("http://localhost:5000/bad-usernames", {
+      const response = await fetch(`${API_BASE_URL}/bad-usernames`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ usernames: pendingBulkUsernames }),
@@ -144,7 +146,7 @@ const BadUsernames = () => {
 
   const confirmDeleteUsername = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/bad-usernames/${usernameToDelete}`, {
+      const response = await fetch(`${API_BASE_URL}/bad-usernames/${usernameToDelete}`, {
         method: "DELETE",
       });
       if (response.ok) {
