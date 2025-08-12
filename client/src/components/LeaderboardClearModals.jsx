@@ -308,6 +308,22 @@ export function AutoClearLogModal({ isOpen, collections, logs, logCollection, on
     year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
   });
 
+  // Helper to shorten interval units
+  const shortUnit = (unit) => {
+    switch (unit) {
+      case "minute": return "m";
+      case "hour": return "h";
+      case "day": return "d";
+      default: return unit;
+    }
+  };
+
+  // Helper to shorten date format
+  const shortDate = (dateStr) => {
+    const d = new Date(dateStr);
+    return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+  };
+
   const filteredLogs = logs.filter(log => logCollection === "all" || log.collectionId === logCollection);
   const totalPages = Math.min(Math.ceil(filteredLogs.length / pageSize), maxPages);
   const pagedLogs = filteredLogs.slice(page * pageSize, (page + 1) * pageSize);
@@ -350,10 +366,14 @@ export function AutoClearLogModal({ isOpen, collections, logs, logCollection, on
                       <td style={{ border: "1px solid #ddd", padding: "6px" }}>{formatDate(log.clearedAt)}</td>
                       <td style={{ border: "1px solid #ddd", padding: "6px" }}>{collections[log.collectionId] || "Unknown"}</td>
                       <td style={{ border: "1px solid #ddd", padding: "6px" }}>
-                        {log.interval === "custom" ? `${log.interval} (${log.customIntervalValue} ${log.customIntervalUnit})` : log.interval}
+                        {log.interval === "custom"
+                          ? `custom (${log.customIntervalValue ? log.customIntervalValue : "?"}${log.customIntervalUnit ? shortUnit(log.customIntervalUnit) : ""})`
+                          : log.interval}
                       </td>
                       <td style={{ border: "1px solid #ddd", padding: "6px" }}>
-                        {log.target === "custom" ? `${log.target} (${formatDate(log.range.start)} - ${formatDate(log.range.end)})` : log.target}
+                        {log.target === "custom" && log.range && log.range.start && log.range.end
+                          ? `custom (${shortDate(log.range.start)}–${shortDate(log.range.end)})`
+                          : log.target}
                       </td>
                       <td style={{ border: "1px solid #ddd", padding: "6px" }}>{log.clearedCount}</td>
                     </tr>

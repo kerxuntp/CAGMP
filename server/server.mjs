@@ -147,6 +147,8 @@ setInterval(async () => {
         clearedAt: now,
         interval: config.interval,
         target: config.target,
+        customIntervalValue: config.interval === "custom" ? config.customIntervalValue : undefined,
+        customIntervalUnit: config.interval === "custom" ? config.customIntervalUnit : undefined,
         range: config.target === "custom" ? { start: config.startDate, end: config.endDate } : undefined,
         clearedCount: result.deletedCount,
         clearedIds: result.deletedIds || [],
