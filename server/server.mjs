@@ -70,32 +70,33 @@ setInterval(async () => {
     const nowTime = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
 
     for (const config of configs) {
-      // Only run if current time matches clearTime
-      if (config.clearTime && nowTime !== config.clearTime) continue;
+        const last = config.lastClearedAt || new Date(0);
+        let due = false;
 
-      const last = config.lastClearedAt || new Date(0);
-      let due = false;
-
-      // Determine if clearing is due based on interval
-      if (config.interval === "day") {
-        due = now - last >= 24 * 60 * 60 * 1000; // 1 day
-      } else if (config.interval === "week") {
-        due = now - last >= 7 * 24 * 60 * 60 * 1000;
-      } else if (config.interval === "month") {
-        due = now - last >= 30 * 24 * 60 * 60 * 1000;
-      } else if (config.interval === "custom") {
-        if (config.customIntervalValue && config.customIntervalUnit) {
-          const msMap = {
-            minute: 60 * 1000,
-            hour: 60 * 60 * 1000,
-            day: 24 * 60 * 60 * 1000,
-          };
-          const intervalMs = config.customIntervalValue * msMap[config.customIntervalUnit];
-          due = now - last >= intervalMs;
+        // For custom interval, ignore clearTime and run based on elapsed time
+        if (config.interval === "custom") {
+          if (config.customIntervalValue && config.customIntervalUnit) {
+            const msMap = {
+              minute: 60 * 1000,
+              hour: 60 * 60 * 1000,
+              day: 24 * 60 * 60 * 1000,
+            };
+            const intervalMs = config.customIntervalValue * msMap[config.customIntervalUnit];
+            due = now - last >= intervalMs;
+          }
+        } else {
+          // For non-custom intervals, only run if current time matches clearTime
+          if (config.clearTime && nowTime !== config.clearTime) continue;
+          if (config.interval === "day") {
+            due = now - last >= 24 * 60 * 60 * 1000; // 1 day
+          } else if (config.interval === "week") {
+            due = now - last >= 7 * 24 * 60 * 60 * 1000;
+          } else if (config.interval === "month") {
+            due = now - last >= 30 * 24 * 60 * 60 * 1000;
+          }
         }
-      }
 
-      if (!due) continue;
+        if (!due) continue;
 
       let filter = { collectionId: config.collectionId };
       if (config.target === "today") {

@@ -90,9 +90,20 @@ router.delete('/:collectionId', async (req, res) => {
 // Get logs for a collection
 router.get('/:collectionId/logs', async (req, res) => {
   try {
+    // Fetch all logs for the collection, newest first
+    const allLogs = await AutoClearLog.find({ collectionId: req.params.collectionId })
+      .sort({ clearedAt: -1 });
+
+    // If more than 30 logs, delete the oldest
+    if (allLogs.length > 30) {
+      const logsToDelete = allLogs.slice(30); // logs beyond the 30th
+      await AutoClearLog.deleteMany({ _id: { $in: logsToDelete.map(log => log._id) } });
+    }
+
+    // Fetch the latest 30 logs again (in case any were deleted)
     const logs = await AutoClearLog.find({ collectionId: req.params.collectionId })
-      .sort({ clearedAt: -1 }) // Newest first
-      .limit(30); // Limit to 30 logs
+      .sort({ clearedAt: -1 })
+      .limit(30);
     res.status(200).json(logs);
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch logs', error: err.message });
