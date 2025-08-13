@@ -2,10 +2,11 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import AlertModal from "./AlertModal";
-import "./Questions.css";
-import "./MainStyles.css";
+import "../styles/pages/Questions.css";
+import "../styles/global/MainStyles.css";
 
 const QuestionsBank = () => {
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
   const [questions, setQuestions] = useState([]);
   const [collections, setCollections] = useState([]);
   const [collectionId, setCollectionId] = useState("");
@@ -32,7 +33,7 @@ const QuestionsBank = () => {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch("http://localhost:5000/collections/");
+        const res = await fetch(`${baseUrl}/collections/`);
         const data = await res.json();
         setCollections(data);
         if (data.length && !collectionId) {
@@ -48,8 +49,8 @@ const QuestionsBank = () => {
     if (!collectionId) return;
     const url =
       collectionId === "all"
-        ? "http://localhost:5000/questions"
-        : `http://localhost:5000/collections/${collectionId}/questions`;
+        ? `${baseUrl}/questions`
+        : `${baseUrl}/collections/${collectionId}/questions`;
     (async () => {
       try {
         const res = await fetch(url);
@@ -92,7 +93,7 @@ const QuestionsBank = () => {
     } else {
       try {
         const res = await fetch(
-          `http://localhost:5000/questions/${number}/${targetCollection}`,
+          `${baseUrl}/questions/${number}/${targetCollection}`,
           { method: "DELETE" }
         );
         if (res.ok) {

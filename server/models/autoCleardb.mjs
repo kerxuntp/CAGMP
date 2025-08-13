@@ -18,17 +18,21 @@ const AutoClearSchema = new mongoose.Schema({
   },
   startDate: {
     type: Date,
+    default: null,
   },
   endDate: {
     type: Date,
+    default: null,
   },
   customIntervalValue: {
     type: Number,
     min: 1,
+    default: null,
   },
   customIntervalUnit: {
     type: String,
     enum: ['minute', 'hour', 'day'],
+    default: null,
   },
   lastClearedAt: {
     type: Date,
