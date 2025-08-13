@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import AlertModal from "./AlertModal";
 import "../styles/global/MainStyles.css";
 
+
 const CreateQuestion = () => {
   const [number, setNumber] = useState("");
   const [selectedCollectionIds, setSelectedCollectionIds] = useState([]);
