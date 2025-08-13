@@ -2,7 +2,8 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AlertModal from "./AlertModal";
-import "./MainStyles.css";
+import "../styles/global/MainStyles.css";
+
 
 const CreateQuestion = () => {
   const [number, setNumber] = useState("");
