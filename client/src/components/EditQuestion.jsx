@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import AlertModal from "./AlertModal";
-import "./MainStyles.css";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+import "../styles/global/MainStyles.css";
 
 const EditQuestion = () => {
   const { number } = useParams(); // unique question number
@@ -39,7 +40,7 @@ const EditQuestion = () => {
     }
 
     // Load all collections
-    fetch("http://localhost:5000/collections/")
+    fetch(`${API_BASE_URL}/collections/`)
       .then((res) => res.json())
       .then((data) => setCollections(data))
       .catch(() => {
@@ -50,7 +51,7 @@ const EditQuestion = () => {
       });
 
     // Load question using number (unambiguous)
-    fetch(`http://localhost:5000/questions/${Number(number)}`)
+    fetch(`${API_BASE_URL}/questions/${Number(number)}`)
       .then((res) => res.json())
       .then((result) => {
         const data = result?.data || result;
@@ -247,7 +248,7 @@ const EditQuestion = () => {
 
     try {
       // Save by number (no collectionId in URL)
-      const res = await fetch(`http://localhost:5000/questions/${number}`, {
+      const res = await fetch(`${API_BASE_URL}/questions/${number}`, {
         method: "PATCH",
         body: formData,
       });

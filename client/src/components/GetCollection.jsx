@@ -3,8 +3,9 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import QuestionOrderModal from "./QuestionOrderModal";
 import GameSettingsModal from "./GameSettingsModal";
 import AlertModal from "./AlertModal";
-import "./Questions.css";
-import "./MainStyles.css";
+import "../styles/pages/Questions.css";
+import "../styles/global/MainStyles.css";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 const GetCollection = () => {
   const [selectedCollection, setSelectedCollection] = useState(null);
@@ -33,7 +34,7 @@ const GetCollection = () => {
   useEffect(() => {
     const fetchCollection = async () => {
       try {
-        const res = await fetch(`http://localhost:5000/collections/${id}`);
+        const res = await fetch(`${API_BASE_URL}/collections/${id}`);
         const data = await res.json();
         if (data && data._id) {
           setSelectedCollection(data);
@@ -51,7 +52,7 @@ const GetCollection = () => {
     if (!id || !selectedCollection) return;
     (async () => {
       try {
-        const res = await fetch(`http://localhost:5000/collections/${id}/questions`);
+        const res = await fetch(`${API_BASE_URL}/collections/${id}/questions`);
         if (!res.ok) {
           const data = await res.json();
           setModalTitle("Error");
@@ -114,7 +115,7 @@ const GetCollection = () => {
     setOnConfirmAction(() => async () => {
       try {
         const res = await fetch(
-          `http://localhost:5000/collections/${selectedCollection._id}`,
+          `${API_BASE_URL}/collections/${selectedCollection._id}`,
           { method: "DELETE" }
         );
         if (res.ok) {
@@ -147,7 +148,7 @@ const GetCollection = () => {
     setModalMessage(`Delete Q${q.number}?`);
     setOnConfirmAction(() => async () => {
       try {
-        const res = await fetch(`http://localhost:5000/questions/${q.number}/${q.collectionId}`, {
+        const res = await fetch(`${API_BASE_URL}/questions/${q.number}/${q.collectionId}`, {
           method: "DELETE"
         });
         if (res.ok) {

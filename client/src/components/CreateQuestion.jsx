@@ -2,7 +2,8 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AlertModal from "./AlertModal";
-import "./MainStyles.css";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+import "../styles/global/MainStyles.css";
 
 const CreateQuestion = () => {
   const [number, setNumber] = useState("");
@@ -36,7 +37,7 @@ const CreateQuestion = () => {
     }
     const fetchCollections = async () => {
       try {
-        const response = await fetch("http://localhost:5000/collections/");
+        const response = await fetch(`${API_BASE_URL}/collections/`);
         const data = await response.json();
         setCollections(data);
       } catch {
@@ -153,7 +154,7 @@ const CreateQuestion = () => {
     // Optional: check if a doc with this number already exists (informational)
     let existingByNumber = null;
     try {
-      const existsRes = await fetch(`http://localhost:5000/questions/${number}`);
+      const existsRes = await fetch(`${API_BASE_URL}/questions/${number}`);
       if (existsRes.ok) {
         const existsJson = await existsRes.json();
         existingByNumber = existsJson?.data || null;
@@ -181,7 +182,7 @@ const CreateQuestion = () => {
     if (image) formData.append("image", image);
 
     try {
-      const response = await fetch("http://localhost:5000/questions", {
+      const response = await fetch(`${API_BASE_URL}/questions`, {
         method: "POST",
         body: formData,
       });

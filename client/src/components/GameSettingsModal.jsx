@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 const GameSettingsModal = ({ collection, onModalFeedback }) => {
   const [showModal, setShowModal] = useState(false);
@@ -26,7 +27,7 @@ const GameSettingsModal = ({ collection, onModalFeedback }) => {
     );
     (async () => {
       try {
-        const res = await fetch("http://localhost:5000/global-settings");
+        const res = await fetch(`${API_BASE_URL}/global-settings`);
         const data = await res.json();
         setGlobalSettings(data);
       } catch (err) {
@@ -48,7 +49,7 @@ const GameSettingsModal = ({ collection, onModalFeedback }) => {
         customSettings: useGlobalSettings ? null : customSettings,
       };
       const res = await fetch(
-        `http://localhost:5000/collections/${collection._id}/game-settings`,
+        `${API_BASE_URL}/collections/${collection._id}/game-settings`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
