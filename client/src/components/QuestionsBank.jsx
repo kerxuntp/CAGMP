@@ -68,24 +68,9 @@ const QuestionsBank = () => {
     return col ? col.name : "Unknown Collection";
   };
 
-  const handleEdit = (number, colId) => {
-    if (collectionId === "all" && !colId) {
-      setModalTitle("Error");
-      setModalMessage("Cannot edit: Question collection ID not found.");
-      setShowError(true);
-      return;
-    }
-    const targetId =
-      collectionId === "all"
-        ? colId
-        : collections.find((c) => c._id === collectionId)?._id;
-    if (!targetId) {
-      setModalTitle("Error");
-      setModalMessage("Collection not selected.");
-      setShowError(true);
-      return;
-    }
-    navigate(`/edit-question/${number}/${targetId}`);
+  // 🔧 EDIT now uses only the number — no collection context required
+  const handleEdit = (number) => {
+    navigate(`/edit-question/${number}`);
   };
 
   const handleDeleteClick = (q) => {
@@ -96,20 +81,30 @@ const QuestionsBank = () => {
   };
 
   const confirmDelete = async () => {
-    const { number, collectionId } = deleteTarget || {};
-    if (!collectionId) {
+    const { number, collectionId: legacyColId, collectionIds } = deleteTarget || {};
+    // Keep existing behavior: require a collection in context for deletion
+    const targetCollection =
+      collectionId !== "all" ? collectionId : (legacyColId || (Array.isArray(collectionIds) ? collectionIds[0] : null));
+
+    if (!targetCollection) {
       setModalTitle("Error");
       setModalMessage("Collection ID not found for this question.");
       setShowError(true);
     } else {
       try {
         const res = await fetch(
-          `${baseUrl}/questions/${number}/${collectionId}`,
+          `${baseUrl}/questions/${number}/${targetCollection}`,
           { method: "DELETE" }
         );
         if (res.ok) {
           setQuestions((prev) =>
-            prev.filter((q) => !(q.number === number && q.collectionId === collectionId))
+            prev.filter((q) => {
+              const inTarget =
+                q.number === number &&
+                (q.collectionId === targetCollection ||
+                 (Array.isArray(q.collectionIds) && q.collectionIds.includes(targetCollection)));
+              return !inTarget;
+            })
           );
           setModalTitle("Deleted");
           setModalMessage("Question deleted.");
@@ -138,6 +133,43 @@ const QuestionsBank = () => {
     if (modalTitle === "Not Logged In") {
       navigate("/login");
     }
+  };
+
+  // Helper for All view badge
+  const renderAllViewBadge = (q) => {
+    const ids = Array.isArray(q.collectionIds) ? q.collectionIds.map(String) : [];
+    const legacy = q.collectionId ? [String(q.collectionId)] : [];
+    const all = [...new Set([...ids, ...legacy])];
+
+    if (all.length === 0) return null;
+    if (all.length > 1) {
+      return (
+        <span
+          style={{
+            fontSize: "12px",
+            color: "#666",
+            background: "#f0f0f0",
+            padding: "2px 6px",
+            borderRadius: "4px",
+          }}
+        >
+          Multiple
+        </span>
+      );
+    }
+    return (
+      <span
+        style={{
+          fontSize: "12px",
+          color: "#666",
+          background: "#f0f0f0",
+          padding: "2px 6px",
+          borderRadius: "4px",
+        }}
+      >
+        {getCollectionName(all[0])}
+      </span>
+    );
   };
 
   return (
@@ -174,7 +206,7 @@ const QuestionsBank = () => {
             <p style={{ fontSize: "16px", fontWeight: "bold", margin: 0 }}>
               Viewing "{collectionId === "all"
                 ? "All Collections"
-                : getCollectionName(collectionId)}"
+                : (collections.find((c) => c._id === collectionId)?.name || "Unknown")}"
             </p>
           </div>
 
@@ -186,7 +218,7 @@ const QuestionsBank = () => {
                 {questions.map((q, idx) => (
                   <li
                     key={q._id}
-                    onClick={() => handleEdit(q.number, q.collectionId)}
+                    onClick={() => handleEdit(q.number)}   
                     style={{
                       background: "#fff",
                       borderRadius: "8px",
@@ -202,28 +234,19 @@ const QuestionsBank = () => {
                           ? `Game Q${idx + 1}: (Original Q${q.number})`
                           : `Q${q.number}`}
                       </strong>
-                      {collectionId === "all" && (
-                        <span
-                          style={{
-                            fontSize: "12px",
-                            color: "#666",
-                            background: "#f0f0f0",
-                            padding: "2px 6px",
-                            borderRadius: "4px",
-                          }}
-                        >
-                          {getCollectionName(q.collectionId)}
-                        </span>
-                      )}
+
+                      {collectionId === "all" && renderAllViewBadge(q)}
                     </div>
+
                     <p style={{ margin: "8px 0" }}>{q.question}</p>
+
                     <div style={{ display: "flex", gap: "8px" }}>
                       <button
                         className="login-btn"
                         style={{ backgroundColor: "#FFC107", color: "#000" }}
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleEdit(q.number, q.collectionId);
+                          handleEdit(q.number);            // 🔧 only number
                         }}
                       >
                         Edit

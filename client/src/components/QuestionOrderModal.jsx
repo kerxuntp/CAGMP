@@ -8,7 +8,15 @@ const QuestionOrderModal = ({ collection, questions, setQuestions, onModalFeedba
 
   useEffect(() => {
     if (!collection) return;
-    const filtered = questions.filter((q) => q.collectionId === collection._id);
+
+    // 🔧 Use collectionIds (array) when present; fall back to legacy collectionId
+    const filtered = questions.filter((q) => {
+      const ids = (q.collectionIds && Array.isArray(q.collectionIds)) ? q.collectionIds.map(String) : [];
+      const legacy = q.collectionId ? [String(q.collectionId)] : [];
+      const allIds = new Set([...ids, ...legacy]);
+      return allIds.has(String(collection._id));
+    });
+
     if (collection.questionOrder?.length) {
       setOrderedQuestions(
         collection.questionOrder
@@ -16,7 +24,7 @@ const QuestionOrderModal = ({ collection, questions, setQuestions, onModalFeedba
           .filter(Boolean)
       );
     } else {
-      setOrderedQuestions(filtered.sort((a, b) => a.number - b.number));
+      setOrderedQuestions([...filtered].sort((a, b) => a.number - b.number));
     }
   }, [collection, questions]);
 
