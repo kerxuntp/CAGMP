@@ -37,8 +37,12 @@ const CreateQuestion = () => {
     }
     const fetchCollections = async () => {
       try {
+Questions
+        const res = await fetch("http://localhost:5000/collections/");
+        const data = await res.json();
         const response = await fetch(`${API_BASE_URL}/collections/`);
         const data = await response.json();
+main
         setCollections(data);
       } catch {
         setAlertTitle("Error");
@@ -56,11 +60,62 @@ const CreateQuestion = () => {
     );
   };
 
+Questions
+  const showError = (title, message) => {
+    setAlertTitle(title);
+    setAlertMessage(message);
+    setAlertType("error");
+    setShowAlert(true);
+    setIsSubmitting(false);
+  };
+
+ main
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (isSubmitting) return;
     setIsSubmitting(true);
+
+Questions
+    try {
+      // Basic validation
+      if (!number || isNaN(Number(number))) {
+        return showError("Invalid Input", "Please enter a valid question number.");
+      }
+      if (!question.trim()) {
+        return showError("Invalid Input", "Please enter a question.");
+      }
+      if (question.length > 1500) {
+        return showError("Too Long", "Question description must not exceed 1500 characters.");
+      }
+      if (selectedCollectionIds.length === 0) {
+        return showError("Invalid Input", "Please select at least one collection.");
+      }
+      if (!hint.trim() || !funFact.trim()) {
+        return showError("Missing Fields", "Hint and fun fact cannot be empty.");
+      }
+
+      // Prepare answers/options
+      let trimmedAnswers =
+        type === "mcq"
+          ? (correctIndex !== null ? [options[correctIndex]] : [])
+          : answer
+              .split(",")
+              .map((ans) => ans.trim())
+              .filter((ans) => ans);
+
+      if (type === "mcq") {
+        const trimmedOptions = options.map((opt) => opt.trim()).filter(Boolean);
+        if (trimmedOptions.length < 2) {
+          return showError("Invalid Input", "MCQ requires at least 2 options.");
+        }
+        if (correctIndex === null || !trimmedOptions[correctIndex]) {
+          return showError("Invalid Input", "Please select the correct MCQ answer.");
+        }
+      } else {
+        if (trimmedAnswers.length === 0) {
+          return showError("Invalid Input", "Please enter at least one acceptable answer.");
+        }
 
     // Basic validation
     if (!number || isNaN(Number(number))) {
@@ -148,8 +203,21 @@ const CreateQuestion = () => {
         setShowAlert(true);
         setIsSubmitting(false);
         return;
+ main
       }
     }
+
+Questions
+      // Optional: check whether a doc with this number already exists (informational only)
+      let existingByNumber = null;
+      try {
+        const existsRes = await fetch(`http://localhost:5000/questions/${number}`);
+        if (existsRes.ok) {
+          const existsJson = await existsRes.json();
+          existingByNumber = existsJson?.data || null;
+        }
+      } catch {
+        // ignore precheck errors
 
     // Optional: check if a doc with this number already exists (informational)
     let existingByNumber = null;
@@ -158,10 +226,71 @@ const CreateQuestion = () => {
       if (existsRes.ok) {
         const existsJson = await existsRes.json();
         existingByNumber = existsJson?.data || null;
+main
       }
     } catch {
       // ignore precheck errors; backend will still upsert safely
     }
+
+Questions
+      // Build payload
+      const formData = new FormData();
+      formData.append("number", String(number).trim());
+      formData.append(
+        "collectionIds",
+        JSON.stringify(selectedCollectionIds.map((id) => id.trim()))
+      );
+      formData.append("question", question.trim());
+      formData.append("type", type);
+      formData.append("hint", hint.trim());
+      formData.append("funFact", funFact.trim());
+      if (type === "mcq") {
+        const trimmedOptions = options.map((opt) => opt.trim()).filter(Boolean);
+        formData.append("options", JSON.stringify(trimmedOptions));
+        formData.append("answer", JSON.stringify([trimmedOptions[correctIndex]]));
+      } else {
+        formData.append("answer", JSON.stringify(trimmedAnswers));
+      }
+      if (image) formData.append("image", image);
+
+      // Create / merge one doc per question number
+      const res = await fetch("http://localhost:5000/questions", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        return showError("Error", data.message || "Could not add question.");
+      }
+
+      setAlertTitle("Success");
+      setAlertMessage(
+        existingByNumber
+          ? "Question saved and merged into the existing number (collections updated)."
+          : "Question added successfully!"
+      );
+      setAlertType("success");
+      setShowAlert(true);
+
+      // Reset form
+      setNumber("");
+      setSelectedCollectionIds([]);
+      setQuestion("");
+      setHint("");
+      setAnswer("");
+      setFunFact("");
+      setType("open");
+      setOptions(["", ""]);
+      setCorrectIndex(null);
+      setIsModalOpen(false);
+      setImage(null);
+    } catch (err) {
+      showError("Error", "Failed to add question.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
     const formData = new FormData();
     formData.append("number", String(number).trim());
@@ -227,6 +356,7 @@ const CreateQuestion = () => {
 
 
 
+main
 
   return (
     <div className="login-container">
