@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import AlertModal from "./AlertModal";
-import "./MainStyles.css";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+import "../styles/global/MainStyles.css";
 
 const EditQuestion = () => {
   const { number } = useParams(); // unique question number
@@ -14,7 +15,7 @@ const EditQuestion = () => {
   const [hint, setHint] = useState("");
   const [answer, setAnswer] = useState(""); // open-ended input (comma-separated)
   const [funFact, setFunFact] = useState("");
-  const [type, setType] = useState("");
+  const [type, setType] = useState("open");
   const [options, setOptions] = useState(["", ""]);
   const [correctIndex, setCorrectIndex] = useState(null);
   const [image, setImage] = useState(null);
@@ -39,7 +40,7 @@ const EditQuestion = () => {
     }
 
     // Load all collections
-    fetch("http://localhost:5000/collections/")
+    fetch(`${API_BASE_URL}/collections/`)
       .then((res) => res.json())
       .then((data) => setCollections(data))
       .catch(() => {
@@ -49,37 +50,37 @@ const EditQuestion = () => {
         setShowAlert(true);
       });
 
-    // Load question using number (unambiguous)
-    fetch(`http://localhost:5000/questions/${number}`)
+    // Load question by number
+    fetch(`${API_BASE_URL}/questions/${Number(number)}`)
       .then((res) => res.json())
-      .then(({ data }) => {
+      .then((result) => {
+        const data = result?.data || result;
+        if (!data || !data.question) throw new Error("No question found");
+
         setQuestion(data.question);
-        setHint(data.hint);
+        setHint(data.hint || "");
         setExistingImage(data.image || null);
         setFunFact(data.funFact || "");
         setType(data.type || "open");
 
-        // options (for MCQ)
         const safeOptions = Array.isArray(data.options) ? data.options : ["", ""];
         setOptions(safeOptions);
 
-        // answers
         if (data.type === "mcq") {
-          // MCQ stores answer as ["correctOptionString"]
           const idx =
             Array.isArray(safeOptions) && Array.isArray(data.answer)
               ? safeOptions.findIndex((opt) => opt === data.answer[0])
               : -1;
           setCorrectIndex(idx >= 0 ? idx : null);
-          setAnswer(""); // not used for MCQ input
+          setAnswer("");
         } else {
-          // open-ended answers array -> comma input
           setCorrectIndex(null);
-          const openAns = Array.isArray(data.answer) ? data.answer.join(", ") : String(data.answer || "");
+          const openAns = Array.isArray(data.answer)
+            ? data.answer.join(", ")
+            : String(data.answer || "");
           setAnswer(openAns);
         }
 
-        // preselect collections
         setSelectedCollectionIds((data.collectionIds || []).map((id) => id.toString()));
         originalData.current = data;
       })
@@ -104,7 +105,7 @@ const EditQuestion = () => {
   };
 
   const addOption = () => {
-    if (options.length < 4) setOptions([...options, ""]);
+    if (options.length < 4) setOptions((o) => [...o, ""]);
   };
 
   const removeOption = (index) => {
@@ -121,9 +122,6 @@ const EditQuestion = () => {
 
     if (!question.trim()) {
       setAlertTitle("Invalid Input");
-Questions
-      setAlertMessage("Please enter a question.");
-
       setAlertMessage("Please enter a question description.");
       setAlertType("error");
       setShowAlert(true);
@@ -133,14 +131,11 @@ Questions
     if (question.length > 1500) {
       setAlertTitle("Too Long");
       setAlertMessage("Question description must not exceed 1500 characters.");
-main
       setAlertType("error");
       setShowAlert(true);
       return;
     }
 
-Questions
-    // Build answers payload
     const trimmedAnswers =
       type === "open"
         ? answer
@@ -152,7 +147,7 @@ Questions
         : [];
 
     if (type === "mcq") {
-      const trimmedOptions = options.map((opt) => opt.trim()).filter((opt) => opt);
+      const trimmedOptions = options.map((opt) => opt.trim()).filter(Boolean);
       if (trimmedOptions.length < 2) {
         setAlertTitle("Invalid Input");
         setAlertMessage("MCQ requires at least 2 options.");
@@ -175,6 +170,7 @@ Questions
         setShowAlert(true);
         return;
       }
+    }
 
     if (!hint.trim() || !funFact.trim()) {
       setAlertTitle("Missing Fields");
@@ -182,7 +178,6 @@ Questions
       setAlertType("error");
       setShowAlert(true);
       return;
-main
     }
 
     const formData = new FormData();
@@ -196,9 +191,8 @@ main
     );
 
     if (type === "mcq") {
-      const trimmedOptions = options.map((opt) => opt.trim()).filter((opt) => opt);
+      const trimmedOptions = options.map((opt) => opt.trim()).filter(Boolean);
       const uniqueOptions = [...new Set(trimmedOptions)];
-
       if (trimmedOptions.length < 2 || trimmedOptions.length > 4) {
         setAlertTitle("MCQ Error");
         setAlertMessage("Please enter between 2 and 4 non-empty MCQ options.");
@@ -206,7 +200,6 @@ main
         setShowAlert(true);
         return;
       }
-
       if (trimmedOptions.length !== uniqueOptions.length) {
         setAlertTitle("Duplicate Options");
         setAlertMessage("Each MCQ option must be unique.");
@@ -214,7 +207,6 @@ main
         setShowAlert(true);
         return;
       }
-
       if (correctIndex === null || !trimmedOptions[correctIndex]) {
         setAlertTitle("Correct Answer Required");
         setAlertMessage("Please select a valid correct answer.");
@@ -222,17 +214,14 @@ main
         setShowAlert(true);
         return;
       }
-
-      // Append each option
-      trimmedOptions.forEach((opt) => formData.append("options", opt));
-      // Append correct answer
-      formData.append("answer", trimmedOptions[correctIndex]);
+      // send arrays as JSON strings (matches your backend)
+      formData.append("options", JSON.stringify(trimmedOptions));
+      formData.append("answer", JSON.stringify([trimmedOptions[correctIndex]]));
     } else {
       const parsedAnswers = answer
         .split(",")
         .map((a) => a.trim().replace(/^['"]|['"]$/g, ""))
         .filter((a) => a);
-
       if (!parsedAnswers.length) {
         setAlertTitle("Invalid Input");
         setAlertMessage("Please enter at least one valid open-ended answer.");
@@ -240,20 +229,17 @@ main
         setShowAlert(true);
         return;
       }
-
-      parsedAnswers.forEach((ans) => formData.append("answer", ans));
+      formData.append("answer", JSON.stringify(parsedAnswers));
     }
 
     if (image) formData.append("image", image);
     if (deleteImage) formData.append("deleteImage", "true");
 
     try {
-      // Save by number (no collectionId in URL)
-      const res = await fetch(`http://localhost:5000/questions/${number}`, {
+      const res = await fetch(`${API_BASE_URL}/questions/${number}`, {
         method: "PATCH",
         body: formData,
       });
-
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Update failed.");
 
@@ -263,25 +249,12 @@ main
       setShowAlert(true);
     } catch (err) {
       setAlertTitle("Error");
-      setAlertMessage(err.message);
+      setAlertMessage(err?.message || "Failed to update question.");
       setAlertType("error");
       setShowAlert(true);
     }
   };
 
-Questions
-
-
-  // MCQ Options Modal logic
-  const openModal = () => setIsModalOpen(true);
-  const handleSaveOptions = () => {
-    setIsModalOpen(false);
-    setShowOptionsSaved(true);
-  };
-  const handleOptionsSavedClose = () => setShowOptionsSaved(false);
-
-  // AlertModal close handler
-main
   const handleAlertClose = () => {
     setShowAlert(false);
     if (alertType === "success") navigate("/questions?collection=all");
@@ -310,7 +283,7 @@ main
             ))}
           </div>
 
-          {/* Question Type */}
+          {/* Type */}
           <select
             value={type}
             onChange={(e) => setType(e.target.value)}
@@ -321,7 +294,7 @@ main
             <option value="mcq">Multiple Choice Question</option>
           </select>
 
-          {/* Question, Hint */}
+          {/* Question / Hint */}
           <textarea
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
@@ -329,7 +302,6 @@ main
             required
             className="login-btn"
           />
-
           <input
             type="text"
             value={hint}
@@ -351,7 +323,6 @@ main
             onChange={(e) => setImage(e.target.files?.[0] || null)}
             className="login-btn"
           />
-Questions
 
           <label className="checkbox-label" style={{ maxWidth: 260 }}>
             Delete existing image
@@ -361,27 +332,6 @@ Questions
               onChange={(e) => setDeleteImage(e.target.checked)}
             />
           </label>
-
-
-          {type === "mcq" && (
-            <button type="button" onClick={openModal} className="login-btn">
-              Manage MCQ Options
-            </button>
-          )}
-
-          {type === "open" && (
-            <>
-              <p>Enter acceptable answers (comma-separated):</p>
-              <input
-                type="text"
-                value={answer}
-                onChange={(e) => setAnswer(e.target.value)}
-                placeholder="Answer(s)"
-                className="login-btn"
-              />
-            </>
-          )}
-main
 
           {/* MCQ section */}
           {type === "mcq" && (
