@@ -50,9 +50,13 @@ const EditQuestion = () => {
       });
 
     // Load question using number (unambiguous)
-    fetch(`http://localhost:5000/questions/${number}`)
+    fetch(`http://localhost:5000/questions/${Number(number)}`)
       .then((res) => res.json())
-      .then(({ data }) => {
+      .then((result) => {
+        const data = result?.data || result;
+        if (!data || !data.question) {
+          throw new Error("No question found");
+        }
         setQuestion(data.question);
         setHint(data.hint);
         setExistingImage(data.image || null);
@@ -83,7 +87,7 @@ const EditQuestion = () => {
         setSelectedCollectionIds((data.collectionIds || []).map((id) => id.toString()));
         originalData.current = data;
       })
-      .catch(() => {
+      .catch((err) => {
         setAlertTitle("Error");
         setAlertMessage("Failed to load question.");
         setAlertType("error");
@@ -121,9 +125,6 @@ const EditQuestion = () => {
 
     if (!question.trim()) {
       setAlertTitle("Invalid Input");
-Questions
-      setAlertMessage("Please enter a question.");
-
       setAlertMessage("Please enter a question description.");
       setAlertType("error");
       setShowAlert(true);
@@ -133,13 +134,10 @@ Questions
     if (question.length > 1500) {
       setAlertTitle("Too Long");
       setAlertMessage("Question description must not exceed 1500 characters.");
-main
       setAlertType("error");
       setShowAlert(true);
       return;
     }
-
-Questions
     // Build answers payload
     const trimmedAnswers =
       type === "open"
@@ -182,7 +180,7 @@ Questions
       setAlertType("error");
       setShowAlert(true);
       return;
-main
+    }
     }
 
     const formData = new FormData();
@@ -269,19 +267,10 @@ main
     }
   };
 
-Questions
 
 
-  // MCQ Options Modal logic
-  const openModal = () => setIsModalOpen(true);
-  const handleSaveOptions = () => {
-    setIsModalOpen(false);
-    setShowOptionsSaved(true);
-  };
-  const handleOptionsSavedClose = () => setShowOptionsSaved(false);
 
   // AlertModal close handler
-main
   const handleAlertClose = () => {
     setShowAlert(false);
     if (alertType === "success") navigate("/questions?collection=all");
@@ -363,11 +352,7 @@ Questions
           </label>
 
 
-          {type === "mcq" && (
-            <button type="button" onClick={openModal} className="login-btn">
-              Manage MCQ Options
-            </button>
-          )}
+
 
           {type === "open" && (
             <>
@@ -468,6 +453,6 @@ main
       />
     </div>
   );
-};
+}
 
 export default EditQuestion;

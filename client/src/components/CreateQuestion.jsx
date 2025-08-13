@@ -16,7 +16,7 @@ const CreateQuestion = () => {
   const [correctIndex, setCorrectIndex] = useState(null);
   const [collections, setCollections] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // const [isModalOpen, setIsModalOpen] = useState(false); // Not used
   const [image, setImage] = useState(null);
   const [showAlert, setShowAlert] = useState(false);
   const [alertTitle, setAlertTitle] = useState("");
@@ -55,152 +55,136 @@ const CreateQuestion = () => {
     );
   };
 
+
   const handleSubmit = async (e) => {
-Questions
     e.preventDefault();
     if (isSubmitting) return;
     setIsSubmitting(true);
 
-    try {
-      // Basic validation
-      if (!number || isNaN(Number(number))) {
-        setAlertTitle("Invalid Input");
-        setAlertMessage("Please enter a valid question number.");
+    // Basic validation
+    if (!number || isNaN(Number(number))) {
+      setAlertTitle("Invalid Input");
+      setAlertMessage("Please enter a valid question number.");
+      setAlertType("error");
+      setShowAlert(true);
+      setIsSubmitting(false);
+      return;
+    }
+    if (!question.trim()) {
+      setAlertTitle("Invalid Input");
+      setAlertMessage("Please enter a question description.");
+      setAlertType("error");
+      setShowAlert(true);
+      setIsSubmitting(false);
+      return;
+    }
+    if (selectedCollectionIds.length === 0) {
+      setAlertTitle("Invalid Input");
+      setAlertMessage("Please select at least one collection.");
+      setAlertType("error");
+      setShowAlert(true);
+      setIsSubmitting(false);
+      return;
+    }
+    if (!hint.trim() || !funFact.trim()) {
+      setAlertTitle("Missing Fields");
+      setAlertMessage("Hint and fun fact cannot be empty.");
+      setAlertType("error");
+      setShowAlert(true);
+      setIsSubmitting(false);
+      return;
+    }
+    if (question.length > 1500) {
+      setAlertTitle("Too Long");
+      setAlertMessage("Question description must not exceed 1500 characters.");
+      setAlertType("error");
+      setShowAlert(true);
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Prepare answers/options
+    let trimmedAnswers =
+      type === "mcq"
+        ? (correctIndex !== null ? [options[correctIndex]] : [])
+        : answer
+            .split(",")
+            .map((ans) => ans.trim())
+            .filter((ans) => ans);
+
+    if (type === "mcq") {
+      const trimmedOptions = options.map((opt) => opt.trim()).filter(Boolean);
+      const uniqueOptions = [...new Set(trimmedOptions)];
+      if (trimmedOptions.length < 2 || trimmedOptions.length > 4) {
+        setAlertTitle("MCQ Error");
+        setAlertMessage("Please enter between 2 and 4 non-empty MCQ options.");
         setAlertType("error");
         setShowAlert(true);
         setIsSubmitting(false);
         return;
-
-  e.preventDefault();
-  setIsSubmitting(true);
-
-  try {
-    // Fetch all existing questions to check duplicates
-    const allRes = await fetch("http://localhost:5000/questions");
-    const allQuestions = await allRes.json();
-    const exists = allQuestions.some(
-      (q) => q.number === parseInt(number) && q.collectionId === collectionId
-    );
-    if (exists) {
-      return showError("Duplicate Question", "A question with that number already exists in the selected collection.");
+      }
+      if (trimmedOptions.length !== uniqueOptions.length) {
+        setAlertTitle("Duplicate Options");
+        setAlertMessage("Each MCQ option must be unique.");
+        setAlertType("error");
+        setShowAlert(true);
+        setIsSubmitting(false);
+        return;
+      }
+      if (correctIndex === null || !trimmedOptions[correctIndex]) {
+        setAlertTitle("Correct Answer Required");
+        setAlertMessage("Please select a valid correct answer.");
+        setAlertType("error");
+        setShowAlert(true);
+        setIsSubmitting(false);
+        return;
+      }
+    } else {
+      if (trimmedAnswers.length === 0) {
+        setAlertTitle("Invalid Input");
+        setAlertMessage("Please enter at least one acceptable answer.");
+        setAlertType("error");
+        setShowAlert(true);
+        setIsSubmitting(false);
+        return;
+      }
     }
 
-    // Basic validations
-    if (!number || !collectionId || !question || !type || !hint || !funFact) {
-      return showError("Missing Fields", "Please fill in all required fields.");
-    }
-
-    if (question.length > 1500) {
-      return showError("Too Long", "Question description must not exceed 1500 characters.");
+    // Optional: check if a doc with this number already exists (informational)
+    let existingByNumber = null;
+    try {
+      const existsRes = await fetch(`http://localhost:5000/questions/${number}`);
+      if (existsRes.ok) {
+        const existsJson = await existsRes.json();
+        existingByNumber = existsJson?.data || null;
+      }
+    } catch {
+      // ignore precheck errors; backend will still upsert safely
     }
 
     const formData = new FormData();
-    formData.append("number", number);
-    formData.append("collectionId", collectionId);
-    formData.append("question", question);
+    formData.append("number", String(number).trim());
+    // Send collectionIds as a single JSON string (server accepts this)
+    formData.append(
+      "collectionIds",
+      JSON.stringify(selectedCollectionIds.map((id) => id.trim()))
+    );
+    formData.append("question", question.trim());
     formData.append("type", type);
-    formData.append("hint", hint);
-    formData.append("funFact", funFact);
-
+    formData.append("hint", hint.trim());
+    formData.append("answer", JSON.stringify(trimmedAnswers));
+    formData.append("funFact", funFact.trim());
     if (type === "mcq") {
-      const cleanOptions = options.map((opt) => opt.trim()).filter((opt) => opt);
-      const uniqueOptions = [...new Set(cleanOptions)];
+      const trimmedOptions = options.map((opt) => opt.trim()).filter(Boolean);
+      formData.append("options", JSON.stringify(trimmedOptions));
+    }
+    if (image) formData.append("image", image);
 
-      if (cleanOptions.length < 2 || cleanOptions.length > 4) {
-        return showError("MCQ Error", "Please enter between 2 and 4 non-empty MCQ options.");
-main
-      }
-      if (!question.trim()) {
-        setAlertTitle("Invalid Input");
-        setAlertMessage("Please enter a question.");
-        setAlertType("error");
-        setShowAlert(true);
-        setIsSubmitting(false);
-        return;
-      }
-      if (selectedCollectionIds.length === 0) {
-        setAlertTitle("Invalid Input");
-        setAlertMessage("Please select at least one collection.");
-        setAlertType("error");
-        setShowAlert(true);
-        setIsSubmitting(false);
-        return;
-      }
-
-      // Prepare answers/options
-      let trimmedAnswers =
-        type === "mcq"
-          ? (correctIndex !== null ? [options[correctIndex]] : [])
-          : answer
-              .split(",")
-              .map((ans) => ans.trim())
-              .filter((ans) => ans);
-
-      if (type === "mcq") {
-        const trimmedOptions = options.map((opt) => opt.trim()).filter(Boolean);
-        if (trimmedOptions.length < 2) {
-          setAlertTitle("Invalid Input");
-          setAlertMessage("MCQ requires at least 2 options.");
-          setAlertType("error");
-          setShowAlert(true);
-          setIsSubmitting(false);
-          return;
-        }
-        if (correctIndex === null || !trimmedOptions[correctIndex]) {
-          setAlertTitle("Invalid Input");
-          setAlertMessage("Please select the correct MCQ answer.");
-          setAlertType("error");
-          setShowAlert(true);
-          setIsSubmitting(false);
-          return;
-        }
-      } else {
-        if (trimmedAnswers.length === 0) {
-          setAlertTitle("Invalid Input");
-          setAlertMessage("Please enter at least one acceptable answer.");
-          setAlertType("error");
-          setShowAlert(true);
-          setIsSubmitting(false);
-          return;
-        }
-      }
-
-      // Optional: check if a doc with this number already exists (informational)
-      let existingByNumber = null;
-      try {
-        const existsRes = await fetch(`http://localhost:5000/questions/${number}`);
-        if (existsRes.ok) {
-          const existsJson = await existsRes.json();
-          existingByNumber = existsJson?.data || null;
-        }
-      } catch {
-        // ignore precheck errors; backend will still upsert safely
-      }
-
-Questions
-      const formData = new FormData();
-      formData.append("number", String(number).trim());
-      // Send collectionIds as a single JSON string (server accepts this)
-      formData.append(
-        "collectionIds",
-        JSON.stringify(selectedCollectionIds.map((id) => id.trim()))
-      );
-      formData.append("question", question.trim());
-      formData.append("type", type);
-      formData.append("hint", hint.trim());
-      formData.append("answer", JSON.stringify(trimmedAnswers));
-      formData.append("funFact", funFact.trim());
-      if (type === "mcq") {
-        const trimmedOptions = options.map((opt) => opt.trim()).filter(Boolean);
-        formData.append("options", JSON.stringify(trimmedOptions));
-      }
-      if (image) formData.append("image", image);
-
+    try {
       const response = await fetch("http://localhost:5000/questions", {
         method: "POST",
         body: formData,
       });
-
       const data = await response.json();
       if (response.ok) {
         setAlertTitle("Success");
@@ -222,92 +206,26 @@ Questions
         setType("open");
         setOptions(["", ""]);
         setCorrectIndex(null);
-        setIsModalOpen(false);
         setImage(null);
       } else {
         setAlertTitle("Error");
         setAlertMessage(data.message || "Could not add question.");
         setAlertType("error");
         setShowAlert(true);
-
-      if (cleanOptions.length !== uniqueOptions.length) {
-        return showError("Duplicate Options", "Each MCQ option must be unique.");
-main
       }
-
-      if (correctIndex === null || !cleanOptions[correctIndex]) {
-        return showError("Correct Answer Required", "Please select a valid correct answer.");
-      }
-
-      // Append options and correct answer
-      cleanOptions.forEach((opt) => formData.append("options", opt));
-      formData.append("answer", cleanOptions[correctIndex]);
-
-    } else {
-      // Open-ended answer parsing
-      const parsedAnswers = answer
-        .split(",")
-        .map((ans) => ans.trim().replace(/^['"]|['"]$/g, ""))
-        .filter((ans) => ans);
-
-      if (!parsedAnswers.length) {
-        return showError("Missing Answer", "Please enter at least one valid open-ended answer.");
-      }
-
-      parsedAnswers.forEach((ans) => formData.append("answer", ans));
-    }
-
-    if (image) formData.append("image", image);
-
-    const response = await fetch("http://localhost:5000/questions", {
-      method: "POST",
-      body: formData,
-    });
-
-    if (response.ok) {
-      setAlertTitle("Success");
-      setAlertMessage("Question added successfully!");
-      setAlertType("success");
+    } catch {
+      setAlertTitle("Error");
+      setAlertMessage("Failed to add question.");
+      setAlertType("error");
       setShowAlert(true);
-      setNumber("");
-      setCollectionId("");
-      setQuestion("");
-      setHint("");
-      setAnswer("");
-      setFunFact("");
-      setType("open");
-      setOptions(["", ""]);
-      setCorrectIndex(null);
-      setIsModalOpen(false);
-      setImage(null);
-    } else {
-      const data = await response.json();
-      return showError("Error", data.message || "Could not add question.");
     }
-Questions
-
-  } catch (err) {
-    return showError("Error", "Failed to add question.");
-  }
-
-  setIsSubmitting(false);
-};
-
-const showError = (title, message) => {
-  setAlertTitle(title);
-  setAlertMessage(message);
-  setAlertType("error");
-  setShowAlert(true);
-  setIsSubmitting(false);
-};
-
-
-  const openModal = () => setIsModalOpen(true);
-  const closeModal = () => setIsModalOpen(false);
-main
-
     setIsSubmitting(false);
   };
+
+
+
+
+
 
   return (
     <div className="login-container">
@@ -478,6 +396,6 @@ main
       />
     </div>
   );
-};
+}
 
 export default CreateQuestion;
