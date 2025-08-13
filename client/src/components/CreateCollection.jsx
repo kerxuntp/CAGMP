@@ -66,6 +66,24 @@ const CreateCollection = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (name.length > 20) {
+      setModalTitle("Invalid Input");
+      setModalMessage("Collection name cannot exceed 20 characters.");
+      setShowErrorModal(true);
+      return;
+    }
+    if (!isPublic && code.length > 6) {
+      setModalTitle("Invalid Input");
+      setModalMessage("Collection code cannot exceed 6 characters.");
+      setShowErrorModal(true);
+      return;
+    }
+    if (welcomeMessage.length > 100) {
+      setModalTitle("Invalid Input");
+      setModalMessage("Welcome message cannot exceed 100 characters.");
+      setShowErrorModal(true);
+      return;
+    }
     if (!name.trim()) {
       setModalTitle("Invalid Input");
       setModalMessage("Please enter a collection name.");

@@ -1,24 +1,22 @@
-import React from 'react';
-import './MainStyles.css'; // Import MainStyles.css to reuse styles
-
-const LivePreview = ({ welcomeMessage, description, textColor, backgroundImage }) => {
+const LivePreview = ({ welcomeMessage, description, textColor, backgroundImage, showLogo = true, buttonColor = '#17c4c4', buttonTextColor = '#fff' }) => {
   const bgSrc = backgroundImage || '/images/changihome.jpg';
 
   return (
     <div
+      className="home-container"
       style={{
-        width: 250,
-        height: 500,
+        width: 300,
+        height: 340,
         borderRadius: 16,
         position: 'relative',
         boxShadow: '0 2px 12px rgba(0,0,0,0.12)',
+        overflow: 'hidden',
       }}
-      className="home-container" // Apply home-container class for consistency
     >
-      {/* Background Image */}
+      {/* Dynamic background */}
       <img
         src={bgSrc}
-        alt="Preview background"
+        alt="Background"
         className="home-background"
         style={{
           position: 'absolute',
@@ -30,7 +28,6 @@ const LivePreview = ({ welcomeMessage, description, textColor, backgroundImage }
           zIndex: 0,
         }}
       />
-      {/* Overlay */}
       <div
         className="home-overlay"
         style={{
@@ -39,122 +36,73 @@ const LivePreview = ({ welcomeMessage, description, textColor, backgroundImage }
           left: 0,
           width: '100%',
           height: '100%',
-          backgroundColor: 'rgba(255, 255, 255, 0.65)',
+          backgroundColor: 'rgba(255,255,255,0.65)',
           zIndex: 1,
         }}
       />
-      {/* Top Left Logo */}
-      <div
-        className="top-left-logo"
-        style={{
-          position: 'absolute',
-          top: 8,
-          left: 8,
-          zIndex: 2,
-        }}
-      >
-        <img
-          src="/images/ces.jpg"
-          alt="Changi Experience Studio"
-          style={{ height: 30, width: 'auto' }} // Scaled down for preview size
-        />
+
+      {/* Disclaimer */}
+      <div style={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        width: '100%',
+        textAlign: 'center',
+        fontSize: 15,
+        color: '#333',
+        background: 'rgba(255,255,255,0.85)',
+        zIndex: 10,
+        padding: '8px 0',
+        fontWeight: '500',
+        letterSpacing: '0.2px',
+      }}>
+        <span>Preview may not be fully accurate (positions/layout may differ)</span>
       </div>
-      {/* Content */}
-      <div
-        className="home-content"
-        style={{
-          position: 'relative',
-          zIndex: 2,
-          height: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          padding: '1rem',
-          boxSizing: 'border-box',
-        }}
-      >
-        <div className="title-block" style={{ marginTop: '2vh' }}>
-          <h1
-            style={{
-              color: textColor,
-              fontSize: 24, // Scaled down from 48px for smaller preview
-              fontFamily: 'serif',
-              fontWeight: 'bold',
-              marginBottom: '0.5rem',
-              textAlign: 'center',
-            }}
-          >
-            {welcomeMessage}
-          </h1>
-          <p
-            style={{
-              color: textColor,
-              fontSize: 12, // Scaled down from default
-              marginTop: '6px',
-              textAlign: 'center',
-            }}
-          >
-            {description}
-          </p>
+
+      {showLogo && (
+        <div className="top-left-logo" style={{ position: 'absolute', top: 16, left: 16, zIndex: 2 }}>
+          <img src="/images/ces.jpg" alt="Changi Experience Studio" style={{ height: 40, width: 'auto' }} />
         </div>
-        <div
-          className="description-block"
-          style={{
-            marginTop: 'auto',
-            marginBottom: '5vh',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-          }}
-        >
+      )}
+
+      <div className="home-content" style={{ position: 'relative', zIndex: 2, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', padding: '1rem', boxSizing: 'border-box' }}>
+        <div className="title-block" style={{ marginTop: '60px', textAlign: 'center' }}>
+          <h1 style={{ color: textColor, fontSize: 24, fontWeight: 'bold', marginBottom: '0.5rem' }}>{welcomeMessage}</h1>
+          <p style={{ color: textColor, fontSize: 12, marginTop: '12px', textAlign: 'center' }}>{description}</p>
+        </div>
+        <div className="description-block" style={{ marginTop: '340px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div className="home-buttons">
             <button
               style={{
-                padding: '6px 16px', // Scaled down
-                fontSize: 12, // Scaled down
+                background: buttonColor,
+                color: buttonTextColor,
+                padding: '10px 32px',
+                fontSize: 14,
                 fontWeight: 'bold',
                 border: 'none',
                 borderRadius: '999px',
-                background: 'linear-gradient(to right, #c4ec1b, #00c4cc)',
-                color: 'black',
                 cursor: 'pointer',
-                width: 100, // Scaled down from 200px
-                marginBottom: 8,
+                width: 120,
+                marginBottom: 12,
               }}
             >
               Play
             </button>
             <button
               style={{
-                padding: '6px 16px',
-                fontSize: 12,
+                background: buttonColor,
+                color: buttonTextColor,
+                padding: '10px 32px',
+                fontSize: 14,
                 fontWeight: 'bold',
                 border: 'none',
                 borderRadius: '999px',
-                background: 'linear-gradient(to right, #c4ec1b, #00c4cc)',
-                color: 'black',
                 cursor: 'pointer',
-                width: 100,
+                width: 120,
               }}
             >
               Admin Login
             </button>
-          </div>
-          <div
-            className="jewel-logo-wrapper"
-            style={{
-              position: 'absolute',
-              bottom: 16,
-              left: 0,
-              right: 0,
-              textAlign: 'center',
-            }}
-          >
-            <img
-              src="/images/jewel.png"
-              alt="Jewel Logo"
-              style={{ width: 50, height: 'auto' }} // Scaled down from 100px
-            />
           </div>
         </div>
       </div>

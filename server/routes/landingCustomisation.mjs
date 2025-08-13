@@ -68,9 +68,12 @@ router.post('/', upload.single('backgroundImage'), async (req, res) => {
       welcomeMessage,
       description,
       titleColor,
-      descriptionColor
+      descriptionColor,
+      showLogo,
+      buttonGradient,
+      buttonTextColor
     } = req.body;
-    
+
     if (backgroundType) settings.backgroundType = backgroundType;
     if (backgroundColor) settings.backgroundColor = backgroundColor;
     if (gradientColors) {
@@ -83,6 +86,9 @@ router.post('/', upload.single('backgroundImage'), async (req, res) => {
     if (description) settings.description = description;
     if (titleColor) settings.titleColor = titleColor;
     if (descriptionColor) settings.descriptionColor = descriptionColor;
+    if (typeof showLogo !== 'undefined') settings.showLogo = showLogo === 'true' || showLogo === true;
+    if (buttonGradient) settings.buttonGradient = buttonGradient;
+    if (buttonTextColor) settings.buttonTextColor = buttonTextColor;
     
     // Handle background image upload
     if (req.file) {

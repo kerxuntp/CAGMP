@@ -121,12 +121,25 @@ const EditQuestion = () => {
 
     if (!question.trim()) {
       setAlertTitle("Invalid Input");
+Questions
       setAlertMessage("Please enter a question.");
+
+      setAlertMessage("Please enter a question description.");
       setAlertType("error");
       setShowAlert(true);
       return;
     }
 
+    if (question.length > 1500) {
+      setAlertTitle("Too Long");
+      setAlertMessage("Question description must not exceed 1500 characters.");
+main
+      setAlertType("error");
+      setShowAlert(true);
+      return;
+    }
+
+Questions
     // Build answers payload
     const trimmedAnswers =
       type === "open"
@@ -162,12 +175,19 @@ const EditQuestion = () => {
         setShowAlert(true);
         return;
       }
+
+    if (!hint.trim() || !funFact.trim()) {
+      setAlertTitle("Missing Fields");
+      setAlertMessage("Hint and fun fact cannot be empty.");
+      setAlertType("error");
+      setShowAlert(true);
+      return;
+main
     }
 
     const formData = new FormData();
     formData.append("question", question.trim());
     formData.append("hint", hint.trim());
-    formData.append("answer", JSON.stringify(trimmedAnswers));
     formData.append("funFact", funFact.trim());
     formData.append("type", type);
     formData.append(
@@ -177,7 +197,51 @@ const EditQuestion = () => {
 
     if (type === "mcq") {
       const trimmedOptions = options.map((opt) => opt.trim()).filter((opt) => opt);
-      formData.append("options", JSON.stringify(trimmedOptions));
+      const uniqueOptions = [...new Set(trimmedOptions)];
+
+      if (trimmedOptions.length < 2 || trimmedOptions.length > 4) {
+        setAlertTitle("MCQ Error");
+        setAlertMessage("Please enter between 2 and 4 non-empty MCQ options.");
+        setAlertType("error");
+        setShowAlert(true);
+        return;
+      }
+
+      if (trimmedOptions.length !== uniqueOptions.length) {
+        setAlertTitle("Duplicate Options");
+        setAlertMessage("Each MCQ option must be unique.");
+        setAlertType("error");
+        setShowAlert(true);
+        return;
+      }
+
+      if (correctIndex === null || !trimmedOptions[correctIndex]) {
+        setAlertTitle("Correct Answer Required");
+        setAlertMessage("Please select a valid correct answer.");
+        setAlertType("error");
+        setShowAlert(true);
+        return;
+      }
+
+      // Append each option
+      trimmedOptions.forEach((opt) => formData.append("options", opt));
+      // Append correct answer
+      formData.append("answer", trimmedOptions[correctIndex]);
+    } else {
+      const parsedAnswers = answer
+        .split(",")
+        .map((a) => a.trim().replace(/^['"]|['"]$/g, ""))
+        .filter((a) => a);
+
+      if (!parsedAnswers.length) {
+        setAlertTitle("Invalid Input");
+        setAlertMessage("Please enter at least one valid open-ended answer.");
+        setAlertType("error");
+        setShowAlert(true);
+        return;
+      }
+
+      parsedAnswers.forEach((ans) => formData.append("answer", ans));
     }
 
     if (image) formData.append("image", image);
@@ -205,6 +269,19 @@ const EditQuestion = () => {
     }
   };
 
+Questions
+
+
+  // MCQ Options Modal logic
+  const openModal = () => setIsModalOpen(true);
+  const handleSaveOptions = () => {
+    setIsModalOpen(false);
+    setShowOptionsSaved(true);
+  };
+  const handleOptionsSavedClose = () => setShowOptionsSaved(false);
+
+  // AlertModal close handler
+main
   const handleAlertClose = () => {
     setShowAlert(false);
     if (alertType === "success") navigate("/questions?collection=all");
@@ -274,6 +351,7 @@ const EditQuestion = () => {
             onChange={(e) => setImage(e.target.files?.[0] || null)}
             className="login-btn"
           />
+Questions
 
           <label className="checkbox-label" style={{ maxWidth: 260 }}>
             Delete existing image
@@ -283,6 +361,27 @@ const EditQuestion = () => {
               onChange={(e) => setDeleteImage(e.target.checked)}
             />
           </label>
+
+
+          {type === "mcq" && (
+            <button type="button" onClick={openModal} className="login-btn">
+              Manage MCQ Options
+            </button>
+          )}
+
+          {type === "open" && (
+            <>
+              <p>Enter acceptable answers (comma-separated):</p>
+              <input
+                type="text"
+                value={answer}
+                onChange={(e) => setAnswer(e.target.value)}
+                placeholder="Answer(s)"
+                className="login-btn"
+              />
+            </>
+          )}
+main
 
           {/* MCQ section */}
           {type === "mcq" && (

@@ -115,9 +115,6 @@ const LoginScreen = () => {
             Forgot Password?
           </button>
 
-          <div className="jewel-logo-wrapper">
-            <img src="/images/jewel.png" alt="Jewel Logo" />
-          </div>
         </div>
       </div>
 
