@@ -19,9 +19,12 @@ const EditQuestion = () => {
   const [type, setType] = useState("open");
   const [options, setOptions] = useState(["", ""]);
   const [correctIndex, setCorrectIndex] = useState(null);
+
   const [image, setImage] = useState(null);
   const [existingImage, setExistingImage] = useState(null);
   const [deleteImage, setDeleteImage] = useState(false);
+
+  const [previewUrl, setPreviewUrl] = useState(null); // NEW: live preview for newly chosen file
 
   const [showAlert, setShowAlert] = useState(false);
   const [alertTitle, setAlertTitle] = useState("");
@@ -29,6 +32,22 @@ const EditQuestion = () => {
   const [alertType, setAlertType] = useState("info");
 
   const originalData = useRef({});
+
+  // Helper: build a safe image URL regardless of how image is stored
+  const getImageUrl = (img) => {
+    if (!img) return "";
+    if (img.startsWith("http://") || img.startsWith("https://")) return img;
+    const clean = img.replace(/^\/+/, "");
+    if (clean.startsWith("uploads/")) return `${API_BASE_URL}/${clean}`;
+    return `${API_BASE_URL}/uploads/${clean}`;
+  };
+
+  // Revoke preview URLs when they change/unmount
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
 
   useEffect(() => {
     const token = localStorage.getItem("jwtToken");
@@ -92,6 +111,20 @@ const EditQuestion = () => {
         setShowAlert(true);
       });
   }, [number, navigate]);
+
+  const handleTypeChange = (e) => {
+    const newType = e.target.value;
+    setType(newType);
+    if (newType === "mcq") {
+      setAnswer(""); // clear open-ended answer
+      setOptions(["", ""]); // reset MCQ options
+      setCorrectIndex(null);
+    } else if (newType === "open") {
+      setOptions(["", ""]); // clear MCQ options
+      setCorrectIndex(null);
+      setAnswer(""); // clear open-ended answer
+    }
+  };
 
   const toggleCollection = (id) => {
     setSelectedCollectionIds((prev) =>
@@ -230,6 +263,8 @@ const EditQuestion = () => {
         setShowAlert(true);
         return;
       }
+
+      // Send as JSON string for consistency with CreateQuestion
       formData.append("answer", JSON.stringify(parsedAnswers));
     }
 
@@ -241,6 +276,7 @@ const EditQuestion = () => {
         method: "PATCH",
         body: formData,
       });
+        // const data = await res.json(); // only needed for error message; you can keep if you prefer
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Update failed.");
 
@@ -269,12 +305,25 @@ const EditQuestion = () => {
         <h2>Edit Question #{number}</h2>
 
         <form onSubmit={handleSubmit} className="centered-form">
-          {/* Collections */}
-          <label>Collections:</label>
-          <div className="checkbox-container">
+          {/* Collections (styled like CreateQuestion) */}
+          <div className="collection-box">
+            <p className="collection-title">Select Collections:</p>
             {collections.map((col) => (
-              <label key={col._id} className="checkbox-label">
-                {col.name}
+              <label
+                key={col._id}
+                className="collection-item"
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '6px 10px',
+                  background: '#222',
+                  color: '#fff',
+                  margin: '5px 0',
+                  borderRadius: '6px'
+                }}
+              >
+                <span>{col.name}</span>
                 <input
                   type="checkbox"
                   checked={selectedCollectionIds.includes(col._id)}
@@ -287,7 +336,7 @@ const EditQuestion = () => {
           {/* Type */}
           <select
             value={type}
-            onChange={(e) => setType(e.target.value)}
+            onChange={handleTypeChange}
             required
             className="dropdown-select"
           >
@@ -311,17 +360,54 @@ const EditQuestion = () => {
             className="login-btn"
           />
 
-          {/* Image */}
-          {existingImage ? (
+          {/* Image (preview new image first, else show existing) */}
+          {previewUrl ? (
             <div style={{ marginBottom: 8 }}>
-              <small>Current image: {existingImage}</small>
+              <p style={{ marginBottom: 4 }}>New image preview:</p>
+              <img
+                src={previewUrl}
+                alt="New preview"
+                style={{
+                  maxWidth: '150px',
+                  maxHeight: '150px',
+                  borderRadius: '8px',
+                  border: '1px solid #ccc',
+                  objectFit: 'cover'
+                }}
+              />
+            </div>
+          ) : existingImage ? (
+            <div style={{ marginBottom: 8 }}>
+              <p style={{ marginBottom: '4px' }}>Current image:</p>
+              <img
+                src={getImageUrl(existingImage)}
+                alt="Current"
+                style={{
+                  maxWidth: '150px',
+                  maxHeight: '150px',
+                  borderRadius: '8px',
+                  border: '1px solid #ccc',
+                  objectFit: 'cover'
+                }}
+                onError={(e) => {
+                  console.warn("Image failed to load:", getImageUrl(existingImage));
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
             </div>
           ) : null}
 
           <input
             type="file"
             accept="image/*"
-            onChange={(e) => setImage(e.target.files?.[0] || null)}
+            onChange={(e) => {
+              const file = e.target.files?.[0] || null;
+              setImage(file);
+              // reset and set preview
+              if (previewUrl) URL.revokeObjectURL(previewUrl);
+              setPreviewUrl(file ? URL.createObjectURL(file) : null);
+              if (file) setDeleteImage(false); // if choosing a new file, don't delete existing
+            }}
             className="login-btn"
           />
 
