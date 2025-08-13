@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import AlertModal from "./AlertModal";
-import "./MainStyles.css";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+import "../styles/global/MainStyles.css";
 
 export default function EnterUsername() {
   const [form, setForm] = useState({ username: "" });
@@ -23,7 +24,7 @@ export default function EnterUsername() {
 
   const checkBadUsername = async (username) => {
     try {
-      const response = await fetch(`http://localhost:5000/bad-usernames/check/${username.trim()}`);
+      const response = await fetch(`${API_BASE_URL}/bad-usernames/check/${username.trim()}`);
       const data = await response.json();
       return data.isBad;
     } catch (error) {
@@ -35,7 +36,7 @@ export default function EnterUsername() {
   const checkDuplicateUsername = async (username, collectionId) => {
     try {
       const response = await fetch(
-        `http://localhost:5000/players/check-username/${encodeURIComponent(username.trim())}/${collectionId}`
+        `${API_BASE_URL}/players/check-username/${encodeURIComponent(username.trim())}/${collectionId}`
       );
       const data = await response.json();
       return data.exists;
