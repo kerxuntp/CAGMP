@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 // No third-party gradient picker
 import { useNavigate } from 'react-router-dom';
-import './LandingCustomisation.css';
+import '../styles/pages/LandingCustomisation.css';
 import AlertModal from './AlertModal';
 import LivePreview from './LivePreview';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';

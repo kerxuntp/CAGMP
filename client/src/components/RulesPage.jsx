@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Countdown from "./Countdown";
 import AlertModal from "./AlertModal";
 import Loading from "./Loading"; 
-import "./MainStyles.css";
+import "../styles/global/MainStyles.css";
 
 export default function RulesPage() {
   const navigate = useNavigate();

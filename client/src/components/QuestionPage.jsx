@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import AlertModal from './AlertModal';
 import Loading from './Loading';
-import "./MainStyles.css";
-import "./QuestionPage.css";
+import "../styles/global/MainStyles.css";
+import "../styles/pages/QuestionPage.css";
 
 const QuestionPage = () => {
   const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";

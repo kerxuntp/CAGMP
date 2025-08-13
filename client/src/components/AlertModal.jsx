@@ -1,5 +1,5 @@
 import React from 'react';
-import './MainStyles.css';
+import '../styles/global/MainStyles.css';
 
 const AlertModal = ({
   isOpen,

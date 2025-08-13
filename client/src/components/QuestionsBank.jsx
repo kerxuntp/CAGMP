@@ -2,8 +2,8 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import AlertModal from "./AlertModal";
-import "./Questions.css";
-import "./MainStyles.css";
+import "../styles/pages/Questions.css";
+import "../styles/global/MainStyles.css";
 
 const QuestionsBank = () => {
   const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";

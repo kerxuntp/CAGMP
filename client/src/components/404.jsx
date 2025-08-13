@@ -1,6 +1,6 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import "./MainStyles.css";
+import "../styles/global/MainStyles.css";
 
 function ErrorPage() {
   const location = useLocation();

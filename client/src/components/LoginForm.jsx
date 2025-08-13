@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AlertModal from "./AlertModal";
-import "./MainStyles.css";
+import "../styles/global/MainStyles.css";
 
 const LoginScreen = () => {
   const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";

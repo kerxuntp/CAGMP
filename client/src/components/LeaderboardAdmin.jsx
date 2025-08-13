@@ -1,11 +1,14 @@
 /* eslint-disable no-unused-vars */
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import './MainStyles.css';
-import './LeaderboardStyles.css';
+import '../styles/global/MainStyles.css';
+import '../styles/pages/LeaderboardStyles.css';
 import AlertModal from "./AlertModal";
 import { ManualClearModal, AutoClearModal, AutoClearLogModal } from "./LeaderboardClearModals";
 import Loading from "./Loading";
+
+// Use the same API base URL pattern as LandingCustomisation.jsx
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
 // Define filter options for the leaderboard (e.g., Today, This Week)
 const FILTERS = [
@@ -31,7 +34,6 @@ function isWithin(date, filter) {
 }
 
 export default function LeaderboardAdmin() {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
   const navigate = useNavigate();
 
   // State for managing leaderboard data and UI
@@ -78,8 +80,8 @@ export default function LeaderboardAdmin() {
       setLoading(true);
       try {
         const [playersRes, collectionsRes] = await Promise.all([
-          fetch(`${baseUrl}/players`),
-          fetch(`${baseUrl}/collections`),
+          fetch(`${API_BASE_URL}/players`),
+          fetch(`${API_BASE_URL}/collections`),
         ]);
         const [playersData, collectionsData] = await Promise.all([
           playersRes.json(),
@@ -97,7 +99,7 @@ export default function LeaderboardAdmin() {
 
         const configs = await Promise.all(
           collectionsData.map(async (col) => {
-            const res = await fetch(`${baseUrl}/auto-clear-config/${col._id}`);
+            const res = await fetch(`${API_BASE_URL}/auto-clear-config/${col._id}`);
             return res.status === 200 ? { [col._id]: await res.json() } : { [col._id]: null };
           })
         );
@@ -124,7 +126,7 @@ export default function LeaderboardAdmin() {
     if (showLogModal && selectedCollection !== "all") {
       async function fetchLogs() {
         try {
-          const res = await fetch(`${baseUrl}/auto-clear-config/${selectedCollection}/logs`);
+          const res = await fetch(`${API_BASE_URL}/auto-clear-config/${selectedCollection}/logs`);
           const data = await res.json();
           setLogs(data);
         } catch (err) {
@@ -186,9 +188,9 @@ export default function LeaderboardAdmin() {
   const doManualClear = async () => {
     try {
       if (manualRange === "all" && manualCol === "all") {
-        await fetch(`${baseUrl}/players/clear`, { method: "DELETE" });
+        await fetch(`${API_BASE_URL}/players/clear`, { method: "DELETE" });
       } else {
-        await fetch(`${baseUrl}/players/manual-clear/${manualRange}`, {
+        await fetch(`${API_BASE_URL}/players/manual-clear/${manualRange}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(manualCol === "all" ? {} : { collectionId: manualCol }),
@@ -250,7 +252,7 @@ export default function LeaderboardAdmin() {
     };
 
     try {
-      const response = await fetch(`${baseUrl}/auto-clear-config/${selectedConfigCollection}`, {
+      const response = await fetch(`${API_BASE_URL}/auto-clear-config/${selectedConfigCollection}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -281,7 +283,7 @@ export default function LeaderboardAdmin() {
 
   const confirmDeleteAuto = async () => {
     try {
-      const response = await fetch(`${baseUrl}/auto-clear-config/${selectedConfigCollection}`, {
+      const response = await fetch(`${API_BASE_URL}/auto-clear-config/${selectedConfigCollection}`, {
         method: "DELETE",
       });
       if (response.status === 200) {

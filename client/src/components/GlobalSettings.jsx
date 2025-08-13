@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import "./GlobalSettings.css";
+import "../styles/pages/GlobalSettings.css";
 import AlertModal from "./AlertModal";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 

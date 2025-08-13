@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AlertModal from "./AlertModal";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
-import "./MainStyles.css";
+import "../styles/global/MainStyles.css";
 
 const CreateQuestion = () => {
   const [number, setNumber] = useState("");

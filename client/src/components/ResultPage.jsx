@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import './MainStyles.css';
+import '../styles/global/MainStyles.css';
 import AlertModal from './AlertModal';
 import Loading from './Loading';
 

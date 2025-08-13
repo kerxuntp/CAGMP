@@ -3,8 +3,8 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import QuestionOrderModal from "./QuestionOrderModal";
 import GameSettingsModal from "./GameSettingsModal";
 import AlertModal from "./AlertModal";
-import "./Questions.css";
-import "./MainStyles.css";
+import "../styles/pages/Questions.css";
+import "../styles/global/MainStyles.css";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 const GetCollection = () => {
