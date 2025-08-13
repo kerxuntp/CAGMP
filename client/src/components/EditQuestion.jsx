@@ -18,6 +18,21 @@ const EditQuestion = () => {
   const [type, setType] = useState("");
   const [options, setOptions] = useState(["", ""]);
   const [correctIndex, setCorrectIndex] = useState(null);
+
+  // Handle type change: reset fields appropriately
+  const handleTypeChange = (e) => {
+    const newType = e.target.value;
+    setType(newType);
+    if (newType === "mcq") {
+      setAnswer(""); // clear open-ended answer
+      setOptions(["", ""]); // reset MCQ options
+      setCorrectIndex(null);
+    } else if (newType === "open") {
+      setOptions(["", ""]); // clear MCQ options
+      setCorrectIndex(null);
+      setAnswer(""); // clear open-ended answer
+    }
+  };
   const [image, setImage] = useState(null);
   const [existingImage, setExistingImage] = useState(null);
   const [deleteImage, setDeleteImage] = useState(false);
@@ -240,7 +255,8 @@ const EditQuestion = () => {
         return;
       }
 
-      parsedAnswers.forEach((ans) => formData.append("answer", ans));
+      // Send as JSON string for consistency with CreateQuestion
+      formData.append("answer", JSON.stringify(parsedAnswers));
     }
 
     if (image) formData.append("image", image);
@@ -285,12 +301,25 @@ const EditQuestion = () => {
         <h2>Edit Question #{number}</h2>
 
         <form onSubmit={handleSubmit} className="centered-form">
-          {/* Collections */}
-          <label>Collections:</label>
-          <div className="checkbox-container">
+          {/* Collections (styled like CreateQuestion) */}
+          <div className="collection-box">
+            <p className="collection-title">Select Collections:</p>
             {collections.map((col) => (
-              <label key={col._id} className="checkbox-label">
-                {col.name}
+              <label
+                key={col._id}
+                className="collection-item"
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '6px 10px',
+                  background: '#222',
+                  color: '#fff',
+                  margin: '5px 0',
+                  borderRadius: '6px'
+                }}
+              >
+                <span>{col.name}</span>
                 <input
                   type="checkbox"
                   checked={selectedCollectionIds.includes(col._id)}
@@ -303,7 +332,7 @@ const EditQuestion = () => {
           {/* Question Type */}
           <select
             value={type}
-            onChange={(e) => setType(e.target.value)}
+            onChange={handleTypeChange}
             required
             className="dropdown-select"
           >
@@ -355,19 +384,7 @@ Questions
 
 
 
-          {type === "open" && (
-            <>
-              <p>Enter acceptable answers (comma-separated):</p>
-              <input
-                type="text"
-                value={answer}
-                onChange={(e) => setAnswer(e.target.value)}
-                placeholder="Answer(s)"
-                className="login-btn"
-              />
-            </>
-          )}
-main
+          {/* Remove duplicate open-ended answer input */}
 
           {/* MCQ section */}
           {type === "mcq" && (
