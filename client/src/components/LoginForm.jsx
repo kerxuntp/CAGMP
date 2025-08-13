@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AlertModal from "./AlertModal";
-import "./MainStyles.css";
+import "../styles/global/MainStyles.css";
 
 const LoginScreen = () => {
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
@@ -29,7 +30,7 @@ const LoginScreen = () => {
     e.preventDefault();
 
     try {
-      const response = await fetch("http://localhost:5000/admins/login", {
+      const response = await fetch(`${baseUrl}/admins/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
@@ -115,9 +116,6 @@ const LoginScreen = () => {
             Forgot Password?
           </button>
 
-          <div className="jewel-logo-wrapper">
-            <img src="/images/jewel.png" alt="Jewel Logo" />
-          </div>
         </div>
       </div>
 

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Countdown from "./Countdown";
 import AlertModal from "./AlertModal";
 import Loading from "./Loading"; 
-import "./MainStyles.css";
+import "../styles/global/MainStyles.css";
 
 export default function RulesPage() {
   const navigate = useNavigate();
@@ -33,7 +33,7 @@ export default function RulesPage() {
 
     // Fetch collection name and welcome message using the stored collectionId
     if (collectionId) {
-      fetch("http://localhost:5000/collections")
+      fetch(`${import.meta.env.VITE_API_BASE_URL}/collections`)
         .then((res) => res.json())
         .then((data) => {
           const match = data.find((col) => col._id === collectionId);
@@ -81,7 +81,7 @@ export default function RulesPage() {
       const startedAt = new Date().toISOString();
 
       // Create player in backend
-      const createRes = await fetch("http://localhost:5000/players", {
+      const createRes = await fetch(`${import.meta.env.VITE_API_BASE_URL}/players`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, collectionId }),
@@ -99,7 +99,7 @@ export default function RulesPage() {
       sessionStorage.setItem("playerIndex", player.playerIndex);
 
       // Mark the start time of the game in the DB
-      await fetch(`http://localhost:5000/players/${player._id}`, {
+      await fetch(`${import.meta.env.VITE_API_BASE_URL}/players/${player._id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ startedAt, totalTimeInSeconds: 0, collectionId }),

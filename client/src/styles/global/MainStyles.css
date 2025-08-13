@@ -459,3 +459,39 @@ button.login-btn,
   margin-top: 40px;
   box-sizing: border-box;
 }
+
+.collection-box {
+  background-color: rgba(0, 0, 0, 0.7);
+  padding: 15px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  color: white;
+  max-height: 200px;
+  overflow-y: auto;
+  width:90%
+}
+
+.collection-title {
+  font-weight: bold;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.collection-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.collection-name {
+  flex: 1;
+}
+
+.collection-checkbox{
+  margin-left:10px;
+}
+
+
+

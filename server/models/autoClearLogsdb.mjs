@@ -26,7 +26,16 @@ const AutoClearLogSchema = new mongoose.Schema({
   },
   clearedCount: Number,
   clearedIds: [mongoose.Schema.Types.ObjectId],
-}, {
+  }, {
+    customIntervalValue: {
+      type: Number,
+      default: null,
+    },
+    customIntervalUnit: {
+      type: String,
+      enum: ['minute', 'hour', 'day'],
+      default: null,
+    },
   timestamps: true,
 });
 

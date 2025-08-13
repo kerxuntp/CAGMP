@@ -1,41 +1,48 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import AlertModal from "./AlertModal";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 import "./MainStyles.css";
 
 const EditQuestion = () => {
-  const { number, collectionId } = useParams();
+  const { number } = useParams(); // unique question number
   const navigate = useNavigate();
 
-  const [collectionName, setCollectionName] = useState("");
+  const [collections, setCollections] = useState([]);
+  const [selectedCollectionIds, setSelectedCollectionIds] = useState([]);
+
   const [question, setQuestion] = useState("");
   const [hint, setHint] = useState("");
-  const [answer, setAnswer] = useState("");
+  const [answer, setAnswer] = useState(""); // open-ended input (comma-separated)
   const [funFact, setFunFact] = useState("");
-  const [type, setType] = useState("");
+  const [type, setType] = useState("open");
   const [options, setOptions] = useState(["", ""]);
   const [correctIndex, setCorrectIndex] = useState(null);
+
+  // Handle type change: reset fields appropriately
+  const handleTypeChange = (e) => {
+    const newType = e.target.value;
+    setType(newType);
+    if (newType === "mcq") {
+      setAnswer(""); // clear open-ended answer
+      setOptions(["", ""]); // reset MCQ options
+      setCorrectIndex(null);
+    } else if (newType === "open") {
+      setOptions(["", ""]); // clear MCQ options
+      setCorrectIndex(null);
+      setAnswer(""); // clear open-ended answer
+    }
+  };
   const [image, setImage] = useState(null);
   const [existingImage, setExistingImage] = useState(null);
   const [deleteImage, setDeleteImage] = useState(false);
 
-  // Modal and alert states
   const [showAlert, setShowAlert] = useState(false);
   const [alertTitle, setAlertTitle] = useState("");
   const [alertMessage, setAlertMessage] = useState("");
   const [alertType, setAlertType] = useState("info");
-  const [showTypeChangeModal, setShowTypeChangeModal] = useState(false);
-  const [typeChangeMessage, setTypeChangeMessage] = useState("");
-  const [pendingType, setPendingType] = useState("");
-  const [showExitModal, setShowExitModal] = useState(false);
 
-  // Track original data for unsaved changes
   const originalData = useRef({});
-  const [isDirty, setIsDirty] = useState(false);
-
-  // Modal for MCQ options
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [showOptionsSaved, setShowOptionsSaved] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("jwtToken");
@@ -47,98 +54,73 @@ const EditQuestion = () => {
       return;
     }
 
-    if (!collectionId) {
-      setAlertTitle("Missing Data");
-      setAlertMessage("Collection ID is missing.");
-      setAlertType("error");
-      setShowAlert(true);
-      return;
-    }
-
-    (async () => {
-      try {
-        const res = await fetch("http://localhost:5000/collections/");
-        const data = await res.json();
-        const target = data.find((c) => c._id === collectionId);
-        if (target) setCollectionName(target.name);
-      } catch {
+    // Load all collections
+    fetch(`${API_BASE_URL}/collections/`)
+      .then((res) => res.json())
+      .then((data) => setCollections(data))
+      .catch(() => {
         setAlertTitle("Error");
-        setAlertMessage("Failed to load collection.");
+        setAlertMessage("Failed to load collections.");
         setAlertType("error");
         setShowAlert(true);
-      }
-    })();
+      });
 
-    (async () => {
-      try {
-        const res = await fetch(`http://localhost:5000/questions/${number}/${collectionId}`);
-        if (!res.ok) throw new Error();
-        const { data } = await res.json();
+    // Load question by number
+    fetch(`${API_BASE_URL}/questions/${Number(number)}`)
+      .then((res) => res.json())
+      .then((result) => {
+        const data = result?.data || result;
+        if (!data || !data.question) throw new Error("No question found");
+
         setQuestion(data.question);
-        setHint(data.hint);
-        setExistingImage(data.image);
-        setAnswer(Array.isArray(data.answer) ? data.answer.join(", ") : data.answer);
+        setHint(data.hint || "");
+        setExistingImage(data.image || null);
         setFunFact(data.funFact || "");
         setType(data.type || "open");
-        setOptions(Array.isArray(data.options) ? data.options : ["", ""]);
-        setCorrectIndex(
-          Array.isArray(data.options) && Array.isArray(data.answer)
-            ? data.options.findIndex((opt) => opt === data.answer[0])
-            : null
-        );
-        // Save original data for dirty check
-        originalData.current = {
-          question: data.question,
-          hint: data.hint,
-          answer: Array.isArray(data.answer) ? data.answer.join(", ") : data.answer,
-          funFact: data.funFact || "",
-          type: data.type || "open",
-          options: Array.isArray(data.options) ? data.options : ["", ""],
-          correctIndex:
-            Array.isArray(data.options) && Array.isArray(data.answer)
-              ? data.options.findIndex((opt) => opt === data.answer[0])
-              : null,
-          image: data.image,
-        };
-      } catch {
+
+        const safeOptions = Array.isArray(data.options) ? data.options : ["", ""];
+        setOptions(safeOptions);
+
+        if (data.type === "mcq") {
+          const idx =
+            Array.isArray(safeOptions) && Array.isArray(data.answer)
+              ? safeOptions.findIndex((opt) => opt === data.answer[0])
+              : -1;
+          setCorrectIndex(idx >= 0 ? idx : null);
+          setAnswer("");
+        } else {
+          setCorrectIndex(null);
+          const openAns = Array.isArray(data.answer)
+            ? data.answer.join(", ")
+            : String(data.answer || "");
+          setAnswer(openAns);
+        }
+
+        setSelectedCollectionIds((data.collectionIds || []).map((id) => id.toString()));
+        originalData.current = data;
+      })
+      .catch(() => {
         setAlertTitle("Error");
         setAlertMessage("Failed to load question.");
         setAlertType("error");
         setShowAlert(true);
-      }
-    })();
-  }, [number, collectionId, navigate]);
+      });
+  }, [number, navigate]);
 
-  // Dirty check
-  useEffect(() => {
-    const orig = originalData.current;
-    if (
-      question !== orig.question ||
-      hint !== orig.hint ||
-      answer !== orig.answer ||
-      funFact !== orig.funFact ||
-      type !== orig.type ||
-      JSON.stringify(options) !== JSON.stringify(orig.options) ||
-      correctIndex !== orig.correctIndex ||
-      image !== orig.image
-    ) {
-      setIsDirty(true);
-    } else {
-      setIsDirty(false);
-    }
-  }, [question, hint, answer, funFact, type, options, correctIndex, image]);
+  const toggleCollection = (id) => {
+    setSelectedCollectionIds((prev) =>
+      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
+    );
+  };
 
-  // Option handlers
   const handleOptionChange = (index, value) => {
     const newOptions = [...options];
     newOptions[index] = value;
     setOptions(newOptions);
-    setIsDirty(true);
   };
 
   const addOption = () => {
-    if (options.length < 4) setOptions([...options, ""]);
-    setIsDirty(true);
+    if (options.length < 4) setOptions((o) => [...o, ""]);
   };
 
   const removeOption = (index) => {
@@ -146,71 +128,10 @@ const EditQuestion = () => {
       const newOptions = options.filter((_, i) => i !== index);
       setOptions(newOptions);
       if (correctIndex === index) setCorrectIndex(null);
-      else if (correctIndex > index) setCorrectIndex(correctIndex - 1);
-      setIsDirty(true);
+      else if (correctIndex > index) setCorrectIndex((ci) => ci - 1);
     }
   };
 
-  // Type change logic
-  const handleTypeChange = (e) => {
-    const newType = e.target.value;
-    if (type === "open" && newType === "mcq" && answer.trim()) {
-      setTypeChangeMessage("Switching to MCQ will remove all existing open-ended answers.");
-      setPendingType(newType);
-      setShowTypeChangeModal(true);
-    } else if (type === "mcq" && newType === "open" && (options.some(opt => opt.trim()) || correctIndex !== null)) {
-      setTypeChangeMessage("Switching to open-ended will remove all current MCQ options and correct answers.");
-      setPendingType(newType);
-      setShowTypeChangeModal(true);
-    } else {
-      setType(newType);
-      if (newType === "open") {
-        setOptions(["", ""]);
-        setCorrectIndex(null);
-      } else {
-        setAnswer("");
-      }
-      setIsDirty(true);
-    }
-  };
-
-  const confirmTypeChange = () => {
-    setType(pendingType);
-    if (pendingType === "open") {
-      setOptions(["", ""]);
-      setCorrectIndex(null);
-      setAnswer("");
-    } else {
-      setAnswer("");
-    }
-    setShowTypeChangeModal(false);
-    setIsDirty(true);
-  };
-
-  const cancelTypeChange = () => {
-    setShowTypeChangeModal(false);
-    setPendingType("");
-  };
-
-  // Exit confirmation
-  const handleExit = () => {
-    if (isDirty) {
-      setShowExitModal(true);
-    } else {
-      navigate("/questions?collection=all");
-    }
-  };
-
-  const confirmExit = () => {
-    setShowExitModal(false);
-    navigate("/questions?collection=all");
-  };
-
-  const cancelExit = () => {
-    setShowExitModal(false);
-  };
-
-  // Submit handler
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -230,6 +151,42 @@ const EditQuestion = () => {
       return;
     }
 
+    const trimmedAnswers =
+      type === "open"
+        ? answer
+            .split(",")
+            .map((a) => a.trim())
+            .filter((a) => a)
+        : correctIndex !== null
+        ? [options[correctIndex]]
+        : [];
+
+    if (type === "mcq") {
+      const trimmedOptions = options.map((opt) => opt.trim()).filter(Boolean);
+      if (trimmedOptions.length < 2) {
+        setAlertTitle("Invalid Input");
+        setAlertMessage("MCQ requires at least 2 options.");
+        setAlertType("error");
+        setShowAlert(true);
+        return;
+      }
+      if (correctIndex === null) {
+        setAlertTitle("Invalid Input");
+        setAlertMessage("Please select the correct MCQ answer.");
+        setAlertType("error");
+        setShowAlert(true);
+        return;
+      }
+    } else {
+      if (trimmedAnswers.length === 0) {
+        setAlertTitle("Invalid Input");
+        setAlertMessage("Please enter at least one acceptable answer.");
+        setAlertType("error");
+        setShowAlert(true);
+        return;
+      }
+    }
+
     if (!hint.trim() || !funFact.trim()) {
       setAlertTitle("Missing Fields");
       setAlertMessage("Hint and fun fact cannot be empty.");
@@ -242,14 +199,15 @@ const EditQuestion = () => {
     formData.append("question", question.trim());
     formData.append("hint", hint.trim());
     formData.append("funFact", funFact.trim());
-    formData.append("collectionId", collectionId);
-    formData.append("number", number);
     formData.append("type", type);
+    formData.append(
+      "collectionIds",
+      JSON.stringify(selectedCollectionIds.map((id) => id.trim()))
+    );
 
     if (type === "mcq") {
-      const trimmedOptions = options.map((opt) => opt.trim()).filter((opt) => opt);
+      const trimmedOptions = options.map((opt) => opt.trim()).filter(Boolean);
       const uniqueOptions = [...new Set(trimmedOptions)];
-
       if (trimmedOptions.length < 2 || trimmedOptions.length > 4) {
         setAlertTitle("MCQ Error");
         setAlertMessage("Please enter between 2 and 4 non-empty MCQ options.");
@@ -257,7 +215,6 @@ const EditQuestion = () => {
         setShowAlert(true);
         return;
       }
-
       if (trimmedOptions.length !== uniqueOptions.length) {
         setAlertTitle("Duplicate Options");
         setAlertMessage("Each MCQ option must be unique.");
@@ -265,7 +222,6 @@ const EditQuestion = () => {
         setShowAlert(true);
         return;
       }
-
       if (correctIndex === null || !trimmedOptions[correctIndex]) {
         setAlertTitle("Correct Answer Required");
         setAlertMessage("Please select a valid correct answer.");
@@ -273,17 +229,14 @@ const EditQuestion = () => {
         setShowAlert(true);
         return;
       }
-
-      // Append each option
-      trimmedOptions.forEach((opt) => formData.append("options", opt));
-      // Append correct answer
-      formData.append("answer", trimmedOptions[correctIndex]);
+      // send arrays as JSON strings (matches your backend)
+      formData.append("options", JSON.stringify(trimmedOptions));
+      formData.append("answer", JSON.stringify([trimmedOptions[correctIndex]]));
     } else {
       const parsedAnswers = answer
         .split(",")
         .map((a) => a.trim().replace(/^['"]|['"]$/g, ""))
         .filter((a) => a);
-
       if (!parsedAnswers.length) {
         setAlertTitle("Invalid Input");
         setAlertMessage("Please enter at least one valid open-ended answer.");
@@ -292,53 +245,36 @@ const EditQuestion = () => {
         return;
       }
 
-      parsedAnswers.forEach((ans) => formData.append("answer", ans));
+      // Send as JSON string for consistency with CreateQuestion
+      formData.append("answer", JSON.stringify(parsedAnswers));
     }
 
     if (image) formData.append("image", image);
     if (deleteImage) formData.append("deleteImage", "true");
 
     try {
-      const res = await fetch(
-        `http://localhost:5000/questions/${number}/${collectionId}`,
-        { method: "PATCH", body: formData }
-      );
-      if (res.ok) {
-        setAlertTitle("Success");
-        setAlertMessage("Question updated successfully!");
-        setAlertType("success");
-        setShowAlert(true);
-        setIsDirty(false);
-      } else {
-        const data = await res.json();
-        setAlertTitle("Error");
-        setAlertMessage(data.message || "Update failed.");
-        setAlertType("error");
-        setShowAlert(true);
-      }
-    } catch {
-      setAlertTitle("Server Error");
-      setAlertMessage("Something went wrong.");
+      const res = await fetch(`${API_BASE_URL}/questions/${number}`, {
+        method: "PATCH",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Update failed.");
+
+      setAlertTitle("Success");
+      setAlertMessage("Question updated successfully!");
+      setAlertType("success");
+      setShowAlert(true);
+    } catch (err) {
+      setAlertTitle("Error");
+      setAlertMessage(err?.message || "Failed to update question.");
       setAlertType("error");
       setShowAlert(true);
     }
   };
 
-
-  // MCQ Options Modal logic
-  const openModal = () => setIsModalOpen(true);
-  const handleSaveOptions = () => {
-    setIsModalOpen(false);
-    setShowOptionsSaved(true);
-  };
-  const handleOptionsSavedClose = () => setShowOptionsSaved(false);
-
-  // AlertModal close handler
   const handleAlertClose = () => {
     setShowAlert(false);
-    if (alertTitle === "Not Logged In" || alertTitle === "Missing Data" || alertTitle === "Error") {
-      navigate("/questions?collection=all");
-    }
+    if (alertType === "success") navigate("/questions?collection=all");
   };
 
   return (
@@ -346,13 +282,49 @@ const EditQuestion = () => {
       <img src="/images/changihome.jpg" alt="Background" className="background-image" />
       <div className="page-overlay"></div>
       <div className="page-content scrollable-container">
-        <h2>Edit {collectionName} Q#{number}</h2>
+        <h2>Edit Question #{number}</h2>
+
         <form onSubmit={handleSubmit} className="centered-form">
-          <select value={type} onChange={handleTypeChange} required className="dropdown-select">
+          {/* Collections (styled like CreateQuestion) */}
+          <div className="collection-box">
+            <p className="collection-title">Select Collections:</p>
+            {collections.map((col) => (
+              <label
+                key={col._id}
+                className="collection-item"
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '6px 10px',
+                  background: '#222',
+                  color: '#fff',
+                  margin: '5px 0',
+                  borderRadius: '6px'
+                }}
+              >
+                <span>{col.name}</span>
+                <input
+                  type="checkbox"
+                  checked={selectedCollectionIds.includes(col._id)}
+                  onChange={() => toggleCollection(col._id)}
+                />
+              </label>
+            ))}
+          </div>
+
+          {/* Type */}
+          <select
+            value={type}
+            onChange={handleTypeChange}
+            required
+            className="dropdown-select"
+          >
             <option value="open">Open-Ended Question</option>
             <option value="mcq">Multiple Choice Question</option>
           </select>
 
+          {/* Question / Hint */}
           <textarea
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
@@ -360,7 +332,6 @@ const EditQuestion = () => {
             required
             className="login-btn"
           />
-
           <input
             type="text"
             value={hint}
@@ -369,20 +340,76 @@ const EditQuestion = () => {
             className="login-btn"
           />
 
+          {/* Image */}
+          {existingImage ? (
+            <div style={{ marginBottom: 8 }}>
+              <small>Current image: {existingImage}</small>
+            </div>
+          ) : null}
+
           <input
             type="file"
             accept="image/*"
-            onChange={(e) => setImage(e.target.files[0])}
+            onChange={(e) => setImage(e.target.files?.[0] || null)}
             className="login-btn"
-            style={{ marginBottom: "10px" }}
           />
 
+          <label className="checkbox-label" style={{ maxWidth: 260 }}>
+            Delete existing image
+            <input
+              type="checkbox"
+              checked={deleteImage}
+              onChange={(e) => setDeleteImage(e.target.checked)}
+            />
+          </label>
+
+
+
+
+          {/* Remove duplicate open-ended answer input */}
+
+          {/* MCQ section */}
           {type === "mcq" && (
-            <button type="button" onClick={openModal} className="login-btn">
-              Manage MCQ Options
-            </button>
+            <>
+              {options.map((opt, index) => (
+                <div key={index}>
+                  <input
+                    type="text"
+                    value={opt}
+                    onChange={(e) => handleOptionChange(index, e.target.value)}
+                    placeholder={`Option ${String.fromCharCode(65 + index)}`}
+                    className="login-btn"
+                  />
+                  {options.length > 2 && (
+                    <button type="button" onClick={() => removeOption(index)}>
+                      ✖
+                    </button>
+                  )}
+                </div>
+              ))}
+              {options.length < 4 && (
+                <button type="button" onClick={addOption}>
+                  + Add Option
+                </button>
+              )}
+
+              <select
+                value={correctIndex !== null ? correctIndex : ""}
+                onChange={(e) => setCorrectIndex(Number(e.target.value))}
+                required
+                className="dropdown-select"
+              >
+                <option value="">Select Correct Answer</option>
+                {options.map((opt, idx) => (
+                  <option key={idx} value={idx}>
+                    Option {String.fromCharCode(65 + idx)} - {opt}
+                  </option>
+                ))}
+              </select>
+            </>
           )}
 
+          {/* Open-ended section */}
           {type === "open" && (
             <>
               <p>Enter acceptable answers (comma-separated):</p>
@@ -404,108 +431,17 @@ const EditQuestion = () => {
             className="login-btn"
           />
 
-          <button type="submit" className="login-btn">
-            Save
-          </button>
+          <button type="submit" className="login-btn">Save</button>
           <button
             type="button"
-            onClick={() => { handleExit() }}
+            onClick={() => navigate("/questions?collection=all")}
             className="login-btn"
-            style={{ marginTop: "12px" }}
           >
-            Return
+            Cancel
           </button>
         </form>
       </div>
-      {/* Modal for MCQ Options */}
-      {isModalOpen && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h3>Manage MCQ Options</h3>
-            <div className="mcq-options-container">
-              {options.map((opt, index) => (
-                <div key={index} className="mcq-option-row">
-                  <input
-                    type="text"
-                    value={opt}
-                    onChange={(e) => handleOptionChange(index, e.target.value)}
-                    placeholder={`Option ${String.fromCharCode(65 + index)}`}
-                    className="login-btn"
-                  />
-                  {options.length > 2 && (
-                    <button type="button" onClick={() => removeOption(index)} style={{ marginLeft: 6 }}>
-                      ✖
-                    </button>
-                  )}
-                </div>
-              ))}
-              {options.length < 4 && (
-                <button type="button" onClick={addOption} style={{ marginTop: 8 }}>
-                  + Add Option
-                </button>
-              )}
-              <select
-                value={correctIndex !== null ? correctIndex : ""}
-                onChange={(e) => setCorrectIndex(Number(e.target.value))}
-                required
-                className="dropdown-select"
-                style={{ marginTop: 10 }}
-              >
-                <option value="">Select Correct Answer</option>
-                {options.map((opt, idx) => (
-                  <option key={idx} value={idx}>
-                    {`Option ${String.fromCharCode(65 + idx)} - ${opt || "Empty"}`}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="modal-actions">
-              <button type="button" onClick={handleSaveOptions} className="login-btn">
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Options Saved Alert */}
-      <AlertModal
-        isOpen={showOptionsSaved}
-        onClose={handleOptionsSavedClose}
-        title="Options Saved"
-        message="MCQ options have been saved!"
-        confirmText="OK"
-        type="success"
-        showCancel={false}
-      />
-
-      {/* Type change confirmation modal */}
-      <AlertModal
-        isOpen={showTypeChangeModal}
-        onClose={cancelTypeChange}
-        onConfirm={confirmTypeChange}
-        title="Warning"
-        message={typeChangeMessage}
-        confirmText="Confirm"
-        cancelText="Cancel"
-        type="warning"
-        showCancel={true}
-      />
-
-      {/* Exit confirmation modal */}
-      <AlertModal
-        isOpen={showExitModal}
-        onClose={cancelExit}
-        onConfirm={confirmExit}
-        title="Unsaved Changes"
-        message="Are you sure you want to exit? Unsaved changes will be lost."
-        confirmText="Exit"
-        cancelText="Stay"
-        type="warning"
-        showCancel={true}
-      />
-
-      {/* General alert modal */}
       <AlertModal
         isOpen={showAlert}
         onClose={handleAlertClose}

@@ -2,12 +2,21 @@ import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 
 const QuestionOrderModal = ({ collection, questions, setQuestions, onModalFeedback }) => {
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
   const [showModal, setShowModal] = useState(false);
   const [orderedQuestions, setOrderedQuestions] = useState([]);
 
   useEffect(() => {
     if (!collection) return;
-    const filtered = questions.filter((q) => q.collectionId === collection._id);
+
+    // 🔧 Use collectionIds (array) when present; fall back to legacy collectionId
+    const filtered = questions.filter((q) => {
+      const ids = (q.collectionIds && Array.isArray(q.collectionIds)) ? q.collectionIds.map(String) : [];
+      const legacy = q.collectionId ? [String(q.collectionId)] : [];
+      const allIds = new Set([...ids, ...legacy]);
+      return allIds.has(String(collection._id));
+    });
+
     if (collection.questionOrder?.length) {
       setOrderedQuestions(
         collection.questionOrder
@@ -15,7 +24,7 @@ const QuestionOrderModal = ({ collection, questions, setQuestions, onModalFeedba
           .filter(Boolean)
       );
     } else {
-      setOrderedQuestions(filtered.sort((a, b) => a.number - b.number));
+      setOrderedQuestions([...filtered].sort((a, b) => a.number - b.number));
     }
   }, [collection, questions]);
 
@@ -31,7 +40,7 @@ const QuestionOrderModal = ({ collection, questions, setQuestions, onModalFeedba
     try {
       const ids = orderedQuestions.map((q) => q._id);
       const res = await fetch(
-        `http://localhost:5000/collections/${collection._id}/question-order`,
+        `${baseUrl}/collections/${collection._id}/question-order`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -42,7 +51,7 @@ const QuestionOrderModal = ({ collection, questions, setQuestions, onModalFeedba
         onModalFeedback?.("Success", "Question order updated successfully!", "success");
         setShowModal(false);
         // Refresh questions
-        const refreshed = await fetch(`http://localhost:5000/collections/${collection._id}/questions`);
+        const refreshed = await fetch(`${baseUrl}/collections/${collection._id}/questions`);
         const data = await refreshed.json();
         setQuestions(Array.isArray(data) ? data : data.questions || []);
       } else {

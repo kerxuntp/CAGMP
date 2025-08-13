@@ -23,6 +23,7 @@ import GetCollection from "./components/GetCollection.jsx";
 import EditCollection from "./components/EditCollection.jsx";
 import ManageAdmin from "./components/ManageAdmin.jsx";
 import ResetPassword from "./components/ResetPassword.jsx";
+import ErrorPage from "./components/404.jsx";
 
 
 export default function App() {
@@ -41,6 +42,7 @@ export default function App() {
         <Route path="/add-question" element={<CreateQuestion />} />
         <Route path="/questions" element={<Questions />} />
         <Route path="/edit-question/:number/:collectionId" element={<EditQuestion />} />
+        <Route path="/edit-question/:number" element={<EditQuestion />} />
         <Route path="/add-collection" element={<CreateCollection />} />
         <Route path="/admin-leaderboard" element={<AdminLeaderboard />} />
         <Route path="/bad-usernames" element={<BadUsernames />} />
@@ -51,6 +53,7 @@ export default function App() {
         <Route path="/edit-collection/:id" element={<EditCollection />} />
         <Route path="/manage-admins" element={<ManageAdmin />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="*" element={<ErrorPage />} />
       </Routes>
     </div>
   );

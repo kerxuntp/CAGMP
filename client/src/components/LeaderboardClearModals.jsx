@@ -46,11 +46,13 @@ export function ManualClearModal({ isOpen, manualRange, setManualRange, manualCo
 export function AutoClearModal({ isOpen, autoClear, tempAuto, setTempAuto, onConfirm, onClose, onDelete, collectionName }) {
   if (!isOpen) return null;
 
-  const isCustomIntervalInvalid =
-    tempAuto.interval === "custom" && (!tempAuto.customIntervalValue || !tempAuto.customIntervalUnit);
+  // Only allow 'custom' target when interval is 'custom'
+  const isCustomInterval = tempAuto.interval === "custom";
+  const isCustomIntervalInvalid = isCustomInterval && (!tempAuto.customIntervalValue || !tempAuto.customIntervalUnit);
+  const isCustomRange = isCustomInterval && tempAuto.target === "custom";
   const isSaveDisabled =
-    (tempAuto.target === "custom" && (!tempAuto.startDate || !tempAuto.endDate)) ||
-    isCustomIntervalInvalid;
+    isCustomIntervalInvalid ||
+    (isCustomRange && (!tempAuto.startDate || !tempAuto.endDate));
 
   const availableIntervals = [
     { label: "Daily", value: "day" },
@@ -189,12 +191,14 @@ export function AutoClearModal({ isOpen, autoClear, tempAuto, setTempAuto, onCon
             <label style={{ color: "black", fontWeight: "bold" }}>Data to Clear:</label>
             <select
               value={tempAuto.target}
-              onChange={(e) => setTempAuto((t) => ({ 
-                ...t, 
-                target: e.target.value,
-                startDate: e.target.value === "custom" ? t.startDate || new Date().toISOString().slice(0, 10) : null,
-                endDate: e.target.value === "custom" ? t.endDate || new Date().toISOString().slice(0, 10) : null,
-              }))}
+              onChange={(e) => {
+                setTempAuto((t) => ({
+                  ...t,
+                  target: e.target.value,
+                  startDate: e.target.value === "custom" ? t.startDate || new Date().toISOString().slice(0, 10) : null,
+                  endDate: e.target.value === "custom" ? t.endDate || new Date().toISOString().slice(0, 10) : null,
+                }));
+              }}
               style={{ width: "100%", padding: "5px" }}
             >
               <option value="today">Today</option>
@@ -216,7 +220,7 @@ export function AutoClearModal({ isOpen, autoClear, tempAuto, setTempAuto, onCon
                   type="date"
                   value={tempAuto.startDate?.slice(0, 10) || ""}
                   onChange={(e) => setTempAuto((t) => ({ ...t, startDate: e.target.value }))}
-                  style={{ color: "black", padding: "5px" }}
+                  style={{ color: "white", padding: "5px" }}
                 />
               </div>
               <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
@@ -225,7 +229,7 @@ export function AutoClearModal({ isOpen, autoClear, tempAuto, setTempAuto, onCon
                   type="date"
                   value={tempAuto.endDate?.slice(0, 10) || ""}
                   onChange={(e) => setTempAuto((t) => ({ ...t, endDate: e.target.value }))}
-                  style={{ color: "black", padding: "5px" }}
+                  style={{ color: "white", padding: "5px" }}
                 />
               </div>
             </div>
@@ -304,6 +308,22 @@ export function AutoClearLogModal({ isOpen, collections, logs, logCollection, on
     year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
   });
 
+  // Helper to shorten interval units
+  const shortUnit = (unit) => {
+    switch (unit) {
+      case "minute": return "m";
+      case "hour": return "h";
+      case "day": return "d";
+      default: return unit;
+    }
+  };
+
+  // Helper to shorten date format
+  const shortDate = (dateStr) => {
+    const d = new Date(dateStr);
+    return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+  };
+
   const filteredLogs = logs.filter(log => logCollection === "all" || log.collectionId === logCollection);
   const totalPages = Math.min(Math.ceil(filteredLogs.length / pageSize), maxPages);
   const pagedLogs = filteredLogs.slice(page * pageSize, (page + 1) * pageSize);
@@ -346,10 +366,14 @@ export function AutoClearLogModal({ isOpen, collections, logs, logCollection, on
                       <td style={{ border: "1px solid #ddd", padding: "6px" }}>{formatDate(log.clearedAt)}</td>
                       <td style={{ border: "1px solid #ddd", padding: "6px" }}>{collections[log.collectionId] || "Unknown"}</td>
                       <td style={{ border: "1px solid #ddd", padding: "6px" }}>
-                        {log.interval === "custom" ? `${log.interval} (${log.customIntervalValue} ${log.customIntervalUnit})` : log.interval}
+                        {log.interval === "custom"
+                          ? `custom (${log.customIntervalValue ? log.customIntervalValue : "?"}${log.customIntervalUnit ? shortUnit(log.customIntervalUnit) : ""})`
+                          : log.interval}
                       </td>
                       <td style={{ border: "1px solid #ddd", padding: "6px" }}>
-                        {log.target === "custom" ? `${log.target} (${formatDate(log.range.start)} - ${formatDate(log.range.end)})` : log.target}
+                        {log.target === "custom" && log.range && log.range.start && log.range.end
+                          ? `custom (${shortDate(log.range.start)}–${shortDate(log.range.end)})`
+                          : log.target}
                       </td>
                       <td style={{ border: "1px solid #ddd", padding: "6px" }}>{log.clearedCount}</td>
                     </tr>
