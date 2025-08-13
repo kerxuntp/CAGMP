@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import AlertModal from "./AlertModal";
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
-import "../styles/global/MainStyles.css";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+import "./MainStyles.css";
 
 const EditQuestion = () => {
   const { number } = useParams(); // unique question number
@@ -15,7 +15,7 @@ const EditQuestion = () => {
   const [hint, setHint] = useState("");
   const [answer, setAnswer] = useState(""); // open-ended input (comma-separated)
   const [funFact, setFunFact] = useState("");
-  const [type, setType] = useState("");
+  const [type, setType] = useState("open");
   const [options, setOptions] = useState(["", ""]);
   const [correctIndex, setCorrectIndex] = useState(null);
 
@@ -65,45 +65,41 @@ const EditQuestion = () => {
         setShowAlert(true);
       });
 
-    // Load question using number (unambiguous)
+    // Load question by number
     fetch(`${API_BASE_URL}/questions/${Number(number)}`)
       .then((res) => res.json())
       .then((result) => {
         const data = result?.data || result;
-        if (!data || !data.question) {
-          throw new Error("No question found");
-        }
+        if (!data || !data.question) throw new Error("No question found");
+
         setQuestion(data.question);
-        setHint(data.hint);
+        setHint(data.hint || "");
         setExistingImage(data.image || null);
         setFunFact(data.funFact || "");
         setType(data.type || "open");
 
-        // options (for MCQ)
         const safeOptions = Array.isArray(data.options) ? data.options : ["", ""];
         setOptions(safeOptions);
 
-        // answers
         if (data.type === "mcq") {
-          // MCQ stores answer as ["correctOptionString"]
           const idx =
             Array.isArray(safeOptions) && Array.isArray(data.answer)
               ? safeOptions.findIndex((opt) => opt === data.answer[0])
               : -1;
           setCorrectIndex(idx >= 0 ? idx : null);
-          setAnswer(""); // not used for MCQ input
+          setAnswer("");
         } else {
-          // open-ended answers array -> comma input
           setCorrectIndex(null);
-          const openAns = Array.isArray(data.answer) ? data.answer.join(", ") : String(data.answer || "");
+          const openAns = Array.isArray(data.answer)
+            ? data.answer.join(", ")
+            : String(data.answer || "");
           setAnswer(openAns);
         }
 
-        // preselect collections
         setSelectedCollectionIds((data.collectionIds || []).map((id) => id.toString()));
         originalData.current = data;
       })
-      .catch((err) => {
+      .catch(() => {
         setAlertTitle("Error");
         setAlertMessage("Failed to load question.");
         setAlertType("error");
@@ -124,7 +120,7 @@ const EditQuestion = () => {
   };
 
   const addOption = () => {
-    if (options.length < 4) setOptions([...options, ""]);
+    if (options.length < 4) setOptions((o) => [...o, ""]);
   };
 
   const removeOption = (index) => {
@@ -154,7 +150,7 @@ const EditQuestion = () => {
       setShowAlert(true);
       return;
     }
-    // Build answers payload
+
     const trimmedAnswers =
       type === "open"
         ? answer
@@ -166,7 +162,7 @@ const EditQuestion = () => {
         : [];
 
     if (type === "mcq") {
-      const trimmedOptions = options.map((opt) => opt.trim()).filter((opt) => opt);
+      const trimmedOptions = options.map((opt) => opt.trim()).filter(Boolean);
       if (trimmedOptions.length < 2) {
         setAlertTitle("Invalid Input");
         setAlertMessage("MCQ requires at least 2 options.");
@@ -189,6 +185,7 @@ const EditQuestion = () => {
         setShowAlert(true);
         return;
       }
+    }
 
     if (!hint.trim() || !funFact.trim()) {
       setAlertTitle("Missing Fields");
@@ -196,7 +193,6 @@ const EditQuestion = () => {
       setAlertType("error");
       setShowAlert(true);
       return;
-    }
     }
 
     const formData = new FormData();
@@ -210,9 +206,8 @@ const EditQuestion = () => {
     );
 
     if (type === "mcq") {
-      const trimmedOptions = options.map((opt) => opt.trim()).filter((opt) => opt);
+      const trimmedOptions = options.map((opt) => opt.trim()).filter(Boolean);
       const uniqueOptions = [...new Set(trimmedOptions)];
-
       if (trimmedOptions.length < 2 || trimmedOptions.length > 4) {
         setAlertTitle("MCQ Error");
         setAlertMessage("Please enter between 2 and 4 non-empty MCQ options.");
@@ -220,7 +215,6 @@ const EditQuestion = () => {
         setShowAlert(true);
         return;
       }
-
       if (trimmedOptions.length !== uniqueOptions.length) {
         setAlertTitle("Duplicate Options");
         setAlertMessage("Each MCQ option must be unique.");
@@ -228,7 +222,6 @@ const EditQuestion = () => {
         setShowAlert(true);
         return;
       }
-
       if (correctIndex === null || !trimmedOptions[correctIndex]) {
         setAlertTitle("Correct Answer Required");
         setAlertMessage("Please select a valid correct answer.");
@@ -236,17 +229,14 @@ const EditQuestion = () => {
         setShowAlert(true);
         return;
       }
-
-      // Append each option
-      trimmedOptions.forEach((opt) => formData.append("options", opt));
-      // Append correct answer
-      formData.append("answer", trimmedOptions[correctIndex]);
+      // send arrays as JSON strings (matches your backend)
+      formData.append("options", JSON.stringify(trimmedOptions));
+      formData.append("answer", JSON.stringify([trimmedOptions[correctIndex]]));
     } else {
       const parsedAnswers = answer
         .split(",")
         .map((a) => a.trim().replace(/^['"]|['"]$/g, ""))
         .filter((a) => a);
-
       if (!parsedAnswers.length) {
         setAlertTitle("Invalid Input");
         setAlertMessage("Please enter at least one valid open-ended answer.");
@@ -263,12 +253,10 @@ const EditQuestion = () => {
     if (deleteImage) formData.append("deleteImage", "true");
 
     try {
-      // Save by number (no collectionId in URL)
       const res = await fetch(`${API_BASE_URL}/questions/${number}`, {
         method: "PATCH",
         body: formData,
       });
-
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Update failed.");
 
@@ -278,16 +266,12 @@ const EditQuestion = () => {
       setShowAlert(true);
     } catch (err) {
       setAlertTitle("Error");
-      setAlertMessage(err.message);
+      setAlertMessage(err?.message || "Failed to update question.");
       setAlertType("error");
       setShowAlert(true);
     }
   };
 
-
-
-
-  // AlertModal close handler
   const handleAlertClose = () => {
     setShowAlert(false);
     if (alertType === "success") navigate("/questions?collection=all");
@@ -329,7 +313,7 @@ const EditQuestion = () => {
             ))}
           </div>
 
-          {/* Question Type */}
+          {/* Type */}
           <select
             value={type}
             onChange={handleTypeChange}
@@ -340,7 +324,7 @@ const EditQuestion = () => {
             <option value="mcq">Multiple Choice Question</option>
           </select>
 
-          {/* Question, Hint */}
+          {/* Question / Hint */}
           <textarea
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
@@ -348,7 +332,6 @@ const EditQuestion = () => {
             required
             className="login-btn"
           />
-
           <input
             type="text"
             value={hint}
@@ -370,7 +353,6 @@ const EditQuestion = () => {
             onChange={(e) => setImage(e.target.files?.[0] || null)}
             className="login-btn"
           />
-Questions
 
           <label className="checkbox-label" style={{ maxWidth: 260 }}>
             Delete existing image
@@ -471,6 +453,6 @@ Questions
       />
     </div>
   );
-}
+};
 
 export default EditQuestion;
