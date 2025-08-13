@@ -154,4 +154,14 @@ router.get("/check-username/:username/:collectionId", async (req, res) => {
 });
 
 
+router.delete("/:id", async (req, res) => {
+  try {
+    const result = await Player.deleteOne({ _id: new ObjectId(req.params.id) });
+    if (result.deletedCount === 0) return res.status(404).send("Not found");
+    res.status(200).send({ message: "Player deleted" });
+  } catch (err) {
+    res.status(500).send({ error: "Failed to delete player." });
+  }
+});
+
 export default router;

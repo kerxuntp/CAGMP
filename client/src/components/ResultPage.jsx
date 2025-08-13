@@ -18,7 +18,7 @@ export default function ResultPage() {
   const [showErrorModal, setShowErrorModal] = useState(false);
 
   const navigate = useNavigate();
-
+  
   // On component mount, fetch player data
   useEffect(() => {
     const playerId = sessionStorage.getItem("playerId");
@@ -168,7 +168,7 @@ export default function ResultPage() {
         </div>
 
         <p style={{ fontWeight: "bold", marginTop: "2rem" }}>
-          Redeem your gift at the booth now!
+          Redeem your gift now!
         </p>
 
         {/* Show redeem button if not redeemed */}

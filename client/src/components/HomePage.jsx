@@ -71,12 +71,14 @@ const HomePage = ({ previewData }) => {
       
       <div className="home-overlay"></div>
 
-      <div className="top-left-logo">
-        <img src="/images/ces.jpg" alt="Changi Experience Studio" />
-      </div>
+      {customisation?.showLogo !== false && (
+        <div className="top-left-logo">
+          <img src="/images/ces.jpg" alt="Changi Experience Studio" />
+        </div>
+      )}
 
       <div className="home-content">
-  <div className="title-block">
+  <div className="title-block" style={{ marginTop: '60px' }}>
     <h1 style={{ color: customisation?.titleColor || '#000000' }}>
       {customisation?.welcomeMessage || 'Welcome To GoChangi!'}
     </h1>
@@ -85,15 +87,24 @@ const HomePage = ({ previewData }) => {
     </p>
   </div>
 
-  <div className="description-block">
-    <div className="home-buttons">
-      <button onClick={handlePlayClick}>Play</button>
-      <button onClick={handleAdminLoginClick}>Admin Login</button>
+    <div className="description-block" style={{ marginTop: '250px' }}>
+      <div className="home-buttons">
+        <button 
+          onClick={handlePlayClick}
+          style={{
+            background: customisation?.buttonGradient || 'linear-gradient(90deg, #C4EB22, #17C4C4)',
+            color: customisation?.buttonTextColor || '#000'
+          }}
+        >Play</button>
+        <button 
+          onClick={handleAdminLoginClick}
+          style={{
+            background: customisation?.buttonGradient || 'linear-gradient(90deg, #C4EB22, #17C4C4)',
+            color: customisation?.buttonTextColor || '#000'
+          }}
+        >Admin Login</button>
+      </div>
     </div>
-    <div className="jewel-logo-wrapper" style={{ marginTop: '20px' }}>
-      <img src="/images/jewel.png" alt="Jewel Logo" />
-    </div>
-  </div>
 </div>
     </div>
   );

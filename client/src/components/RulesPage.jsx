@@ -57,6 +57,18 @@ export default function RulesPage() {
 
   // Starts the game: creates a player in DB and navigates to the game page
   const beginGame = async () => {
+    sessionStorage.removeItem("playerId");
+    sessionStorage.removeItem("playerIndex");
+    sessionStorage.removeItem("quizStartTime");
+    sessionStorage.removeItem("elapsed");
+    sessionStorage.removeItem("hintsUsed");
+    sessionStorage.removeItem("wrongAnswers");
+    sessionStorage.removeItem("questionsSkipped");
+    sessionStorage.removeItem("timePenalty");
+    sessionStorage.removeItem("currentQuestionIndex");
+    sessionStorage.removeItem("userAnswer");
+    sessionStorage.removeItem("correctAnswers");
+    sessionStorage.removeItem("totalQuestions");
     const collectionId = sessionStorage.getItem("collectionId");
     if (!collectionId) {
       setModalTitle("Missing Collection");
