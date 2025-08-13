@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import './MainStyles.css';
+import '../styles/global/MainStyles.css';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 const HomePage = ({ previewData }) => {
   const navigate = useNavigate();
@@ -13,7 +14,7 @@ const HomePage = ({ previewData }) => {
 
   const fetchCustomisation = async () => {
     try {
-      const response = await fetch('http://localhost:5000/landing-customisation');
+      const response = await fetch(`${API_BASE_URL}/landing-customisation`);
       const data = await response.json();
       setCustomisation(data);
     } catch (error) {
@@ -42,7 +43,7 @@ const HomePage = ({ previewData }) => {
       default:
         { const imageUrl = customisation.backgroundImage.startsWith('/') 
           ? customisation.backgroundImage 
-          : `http://localhost:5000/${customisation.backgroundImage}`;
+          : `${API_BASE_URL}/${customisation.backgroundImage}`;
         return { 
           backgroundImage: `url(${imageUrl})`,
           backgroundSize: 'cover',
@@ -58,7 +59,7 @@ const HomePage = ({ previewData }) => {
         <img 
           src={customisation.backgroundImage.startsWith('/') 
             ? customisation.backgroundImage 
-            : `http://localhost:5000/${customisation.backgroundImage}`} 
+            : `${API_BASE_URL}/${customisation.backgroundImage}`} 
           alt="Background" 
           className="home-background" 
         />

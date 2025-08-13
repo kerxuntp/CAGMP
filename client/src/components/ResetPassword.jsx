@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import "./MainStyles.css";
+import "../styles/global/MainStyles.css";
 
 import AlertModal from "./AlertModal";
 
 const ResetPassword = () => {
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
   const [showModal, setShowModal] = useState(false);
   const [modalProps, setModalProps] = useState({ title: "", message: "", type: "info" });
 
@@ -30,7 +31,7 @@ const ResetPassword = () => {
 
   const handleRequestToken = async () => {
     try {
-      const res = await fetch("http://localhost:5000/admins/forgot-password", {
+      const res = await fetch(`${baseUrl}/admins/forgot-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
@@ -102,7 +103,7 @@ const ResetPassword = () => {
     }
 
     try {
-      const res = await fetch("http://localhost:5000/admins/reset-password", {
+      const res = await fetch(`${baseUrl}/admins/reset-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, newPassword }),
