@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import AlertModal from "./AlertModal";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
-import "./MainStyles.css";
+import "../styles/global/MainStyles.css";
 
 const EditQuestion = () => {
   const { number } = useParams(); // unique question number
@@ -19,23 +19,11 @@ const EditQuestion = () => {
   const [options, setOptions] = useState(["", ""]);
   const [correctIndex, setCorrectIndex] = useState(null);
 
-  // Handle type change: reset fields appropriately
-  const handleTypeChange = (e) => {
-    const newType = e.target.value;
-    setType(newType);
-    if (newType === "mcq") {
-      setAnswer(""); // clear open-ended answer
-      setOptions(["", ""]); // reset MCQ options
-      setCorrectIndex(null);
-    } else if (newType === "open") {
-      setOptions(["", ""]); // clear MCQ options
-      setCorrectIndex(null);
-      setAnswer(""); // clear open-ended answer
-    }
-  };
   const [image, setImage] = useState(null);
   const [existingImage, setExistingImage] = useState(null);
   const [deleteImage, setDeleteImage] = useState(false);
+
+  const [previewUrl, setPreviewUrl] = useState(null); // NEW: live preview for newly chosen file
 
   const [showAlert, setShowAlert] = useState(false);
   const [alertTitle, setAlertTitle] = useState("");
@@ -43,6 +31,22 @@ const EditQuestion = () => {
   const [alertType, setAlertType] = useState("info");
 
   const originalData = useRef({});
+
+  // Helper: build a safe image URL regardless of how image is stored
+  const getImageUrl = (img) => {
+    if (!img) return "";
+    if (img.startsWith("http://") || img.startsWith("https://")) return img;
+    const clean = img.replace(/^\/+/, "");
+    if (clean.startsWith("uploads/")) return `${API_BASE_URL}/${clean}`;
+    return `${API_BASE_URL}/uploads/${clean}`;
+  };
+
+  // Revoke preview URLs when they change/unmount
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
 
   useEffect(() => {
     const token = localStorage.getItem("jwtToken");
@@ -106,6 +110,20 @@ const EditQuestion = () => {
         setShowAlert(true);
       });
   }, [number, navigate]);
+
+  const handleTypeChange = (e) => {
+    const newType = e.target.value;
+    setType(newType);
+    if (newType === "mcq") {
+      setAnswer(""); // clear open-ended answer
+      setOptions(["", ""]); // reset MCQ options
+      setCorrectIndex(null);
+    } else if (newType === "open") {
+      setOptions(["", ""]); // clear MCQ options
+      setCorrectIndex(null);
+      setAnswer(""); // clear open-ended answer
+    }
+  };
 
   const toggleCollection = (id) => {
     setSelectedCollectionIds((prev) =>
@@ -257,6 +275,7 @@ const EditQuestion = () => {
         method: "PATCH",
         body: formData,
       });
+        // const data = await res.json(); // only needed for error message; you can keep if you prefer
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Update failed.");
 
@@ -340,17 +359,54 @@ const EditQuestion = () => {
             className="login-btn"
           />
 
-          {/* Image */}
-          {existingImage ? (
+          {/* Image (preview new image first, else show existing) */}
+          {previewUrl ? (
             <div style={{ marginBottom: 8 }}>
-              <small>Current image: {existingImage}</small>
+              <p style={{ marginBottom: 4 }}>New image preview:</p>
+              <img
+                src={previewUrl}
+                alt="New preview"
+                style={{
+                  maxWidth: '150px',
+                  maxHeight: '150px',
+                  borderRadius: '8px',
+                  border: '1px solid #ccc',
+                  objectFit: 'cover'
+                }}
+              />
+            </div>
+          ) : existingImage ? (
+            <div style={{ marginBottom: 8 }}>
+              <p style={{ marginBottom: '4px' }}>Current image:</p>
+              <img
+                src={getImageUrl(existingImage)}
+                alt="Current"
+                style={{
+                  maxWidth: '150px',
+                  maxHeight: '150px',
+                  borderRadius: '8px',
+                  border: '1px solid #ccc',
+                  objectFit: 'cover'
+                }}
+                onError={(e) => {
+                  console.warn("Image failed to load:", getImageUrl(existingImage));
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
             </div>
           ) : null}
 
           <input
             type="file"
             accept="image/*"
-            onChange={(e) => setImage(e.target.files?.[0] || null)}
+            onChange={(e) => {
+              const file = e.target.files?.[0] || null;
+              setImage(file);
+              // reset and set preview
+              if (previewUrl) URL.revokeObjectURL(previewUrl);
+              setPreviewUrl(file ? URL.createObjectURL(file) : null);
+              if (file) setDeleteImage(false); // if choosing a new file, don't delete existing
+            }}
             className="login-btn"
           />
 
@@ -362,11 +418,6 @@ const EditQuestion = () => {
               onChange={(e) => setDeleteImage(e.target.checked)}
             />
           </label>
-
-
-
-
-          {/* Remove duplicate open-ended answer input */}
 
           {/* MCQ section */}
           {type === "mcq" && (
