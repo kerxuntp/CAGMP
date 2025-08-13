@@ -1,3 +1,4 @@
+// unchanged import statements
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AlertModal from "./AlertModal";
@@ -5,7 +6,7 @@ import "./MainStyles.css";
 
 const CreateQuestion = () => {
   const [number, setNumber] = useState("");
-  const [collectionId, setCollectionId] = useState("");
+  const [selectedCollectionIds, setSelectedCollectionIds] = useState([]);
   const [question, setQuestion] = useState("");
   const [hint, setHint] = useState("");
   const [answer, setAnswer] = useState("");
@@ -17,8 +18,6 @@ const CreateQuestion = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [image, setImage] = useState(null);
-
-  // AlertModal state
   const [showAlert, setShowAlert] = useState(false);
   const [alertTitle, setAlertTitle] = useState("");
   const [alertMessage, setAlertMessage] = useState("");
@@ -50,26 +49,28 @@ const CreateQuestion = () => {
     fetchCollections();
   }, [navigate]);
 
-  const handleOptionChange = (index, value) => {
-    const newOptions = [...options];
-    newOptions[index] = value;
-    setOptions(newOptions);
-  };
-
-  const addOption = () => {
-    if (options.length < 4) setOptions([...options, ""]);
-  };
-
-  const removeOption = (index) => {
-    if (options.length > 2) {
-      const newOptions = options.filter((_, i) => i !== index);
-      setOptions(newOptions);
-      if (correctIndex === index) setCorrectIndex(null);
-      else if (correctIndex > index) setCorrectIndex(correctIndex - 1);
-    }
+  const toggleCollection = (id) => {
+    setSelectedCollectionIds((prev) =>
+      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
+    );
   };
 
   const handleSubmit = async (e) => {
+Questions
+    e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
+    try {
+      // Basic validation
+      if (!number || isNaN(Number(number))) {
+        setAlertTitle("Invalid Input");
+        setAlertMessage("Please enter a valid question number.");
+        setAlertType("error");
+        setShowAlert(true);
+        setIsSubmitting(false);
+        return;
+
   e.preventDefault();
   setIsSubmitting(true);
 
@@ -107,10 +108,131 @@ const CreateQuestion = () => {
 
       if (cleanOptions.length < 2 || cleanOptions.length > 4) {
         return showError("MCQ Error", "Please enter between 2 and 4 non-empty MCQ options.");
+main
       }
+      if (!question.trim()) {
+        setAlertTitle("Invalid Input");
+        setAlertMessage("Please enter a question.");
+        setAlertType("error");
+        setShowAlert(true);
+        setIsSubmitting(false);
+        return;
+      }
+      if (selectedCollectionIds.length === 0) {
+        setAlertTitle("Invalid Input");
+        setAlertMessage("Please select at least one collection.");
+        setAlertType("error");
+        setShowAlert(true);
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Prepare answers/options
+      let trimmedAnswers =
+        type === "mcq"
+          ? (correctIndex !== null ? [options[correctIndex]] : [])
+          : answer
+              .split(",")
+              .map((ans) => ans.trim())
+              .filter((ans) => ans);
+
+      if (type === "mcq") {
+        const trimmedOptions = options.map((opt) => opt.trim()).filter(Boolean);
+        if (trimmedOptions.length < 2) {
+          setAlertTitle("Invalid Input");
+          setAlertMessage("MCQ requires at least 2 options.");
+          setAlertType("error");
+          setShowAlert(true);
+          setIsSubmitting(false);
+          return;
+        }
+        if (correctIndex === null || !trimmedOptions[correctIndex]) {
+          setAlertTitle("Invalid Input");
+          setAlertMessage("Please select the correct MCQ answer.");
+          setAlertType("error");
+          setShowAlert(true);
+          setIsSubmitting(false);
+          return;
+        }
+      } else {
+        if (trimmedAnswers.length === 0) {
+          setAlertTitle("Invalid Input");
+          setAlertMessage("Please enter at least one acceptable answer.");
+          setAlertType("error");
+          setShowAlert(true);
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
+      // Optional: check if a doc with this number already exists (informational)
+      let existingByNumber = null;
+      try {
+        const existsRes = await fetch(`http://localhost:5000/questions/${number}`);
+        if (existsRes.ok) {
+          const existsJson = await existsRes.json();
+          existingByNumber = existsJson?.data || null;
+        }
+      } catch {
+        // ignore precheck errors; backend will still upsert safely
+      }
+
+Questions
+      const formData = new FormData();
+      formData.append("number", String(number).trim());
+      // Send collectionIds as a single JSON string (server accepts this)
+      formData.append(
+        "collectionIds",
+        JSON.stringify(selectedCollectionIds.map((id) => id.trim()))
+      );
+      formData.append("question", question.trim());
+      formData.append("type", type);
+      formData.append("hint", hint.trim());
+      formData.append("answer", JSON.stringify(trimmedAnswers));
+      formData.append("funFact", funFact.trim());
+      if (type === "mcq") {
+        const trimmedOptions = options.map((opt) => opt.trim()).filter(Boolean);
+        formData.append("options", JSON.stringify(trimmedOptions));
+      }
+      if (image) formData.append("image", image);
+
+      const response = await fetch("http://localhost:5000/questions", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setAlertTitle("Success");
+        setAlertMessage(
+          existingByNumber
+            ? "Question saved and merged into the existing number (collections updated)."
+            : "Question added successfully!"
+        );
+        setAlertType("success");
+        setShowAlert(true);
+
+        // Reset form
+        setNumber("");
+        setSelectedCollectionIds([]);
+        setQuestion("");
+        setHint("");
+        setAnswer("");
+        setFunFact("");
+        setType("open");
+        setOptions(["", ""]);
+        setCorrectIndex(null);
+        setIsModalOpen(false);
+        setImage(null);
+      } else {
+        setAlertTitle("Error");
+        setAlertMessage(data.message || "Could not add question.");
+        setAlertType("error");
+        setShowAlert(true);
 
       if (cleanOptions.length !== uniqueOptions.length) {
         return showError("Duplicate Options", "Each MCQ option must be unique.");
+main
       }
 
       if (correctIndex === null || !cleanOptions[correctIndex]) {
@@ -162,6 +284,8 @@ const CreateQuestion = () => {
       const data = await response.json();
       return showError("Error", data.message || "Could not add question.");
     }
+Questions
+
   } catch (err) {
     return showError("Error", "Failed to add question.");
   }
@@ -180,13 +304,9 @@ const showError = (title, message) => {
 
   const openModal = () => setIsModalOpen(true);
   const closeModal = () => setIsModalOpen(false);
+main
 
-  // AlertModal close handler
-  const handleAlertClose = () => {
-    setShowAlert(false);
-    if (alertTitle === "Not Logged In") {
-      navigate("/login");
-    }
+    setIsSubmitting(false);
   };
 
   return (
@@ -210,19 +330,32 @@ const showError = (title, message) => {
             className="login-btn"
           />
 
-          <select
-            value={collectionId}
-            onChange={(e) => setCollectionId(e.target.value)}
-            required
-            className="dropdown-select"
-          >
-            <option value="">Select Collection</option>
+          <div className="collection-box">
+            <p className="collection-title">Select Collections:</p>
             {collections.map((col) => (
-              <option key={col._id} value={col._id}>
-                {col.name}
-              </option>
+              <label
+                key={col._id}
+                className="collection-item"
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '6px 10px',
+                  background: '#222',
+                  color: '#fff',
+                  margin: '5px 0',
+                  borderRadius: '6px'
+                }}
+              >
+                <span>{col.name}</span>
+                <input
+                  type="checkbox"
+                  checked={selectedCollectionIds.includes(col._id)}
+                  onChange={() => toggleCollection(col._id)}
+                />
+              </label>
             ))}
-          </select>
+          </div>
 
           <textarea
             value={question}
@@ -245,14 +378,7 @@ const showError = (title, message) => {
             accept="image/*"
             onChange={(e) => setImage(e.target.files[0])}
             className="login-btn"
-            style={{ marginBottom: "10px" }}
           />
-
-          {type === "mcq" && (
-            <button type="button" onClick={openModal} className="login-btn">
-              Manage MCQ Options
-            </button>
-          )}
 
           {type === "open" && (
             <>
@@ -267,6 +393,60 @@ const showError = (title, message) => {
             </>
           )}
 
+          {type === "mcq" && (
+            <>
+              {/* MCQ options */}
+              {options.map((opt, idx) => (
+                <div key={idx} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <input
+                    type="text"
+                    value={opt}
+                    onChange={(e) => {
+                      const next = [...options];
+                      next[idx] = e.target.value;
+                      setOptions(next);
+                    }}
+                    placeholder={`Option ${String.fromCharCode(65 + idx)}`}
+                    className="login-btn"
+                  />
+                  {options.length > 2 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = options.filter((_, i) => i !== idx);
+                        setOptions(next);
+                        if (correctIndex === idx) setCorrectIndex(null);
+                        else if (correctIndex > idx) setCorrectIndex((ci) => ci - 1);
+                      }}
+                    >
+                      ✖
+                    </button>
+                  )}
+                </div>
+              ))}
+              {options.length < 4 && (
+                <button type="button" onClick={() => setOptions((o) => [...o, ""])}>
+                  + Add Option
+                </button>
+              )}
+
+              {/* Correct answer picker */}
+              <select
+                value={correctIndex !== null ? correctIndex : ""}
+                onChange={(e) => setCorrectIndex(Number(e.target.value))}
+                required
+                className="dropdown-select"
+              >
+                <option value="">Select Correct Answer</option>
+                {options.map((opt, idx) => (
+                  <option key={idx} value={idx}>
+                    Option {String.fromCharCode(65 + idx)} - {opt}
+                  </option>
+                ))}
+              </select>
+            </>
+          )}
+
           <input
             type="text"
             value={funFact}
@@ -278,72 +458,18 @@ const showError = (title, message) => {
           <button type="submit" className="login-btn" disabled={isSubmitting}>
             {isSubmitting ? "Submitting..." : "Add"}
           </button>
-          <button
-            type="button"
-            onClick={() => navigate("/questions")}
-            className="login-btn"
-            style={{ marginTop: "12px" }}
-          >
+          <button type="button" onClick={() => navigate("/questions")} className="login-btn">
             Return
           </button>
         </form>
       </div>
 
-      {/* Modal for MCQ Options */}
-      {isModalOpen && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h3>Manage MCQ Options</h3>
-            <div className="mcq-options-container">
-              {options.map((opt, index) => (
-                <div key={index} className="mcq-option-row">
-                  <input
-                    type="text"
-                    value={opt}
-                    onChange={(e) => handleOptionChange(index, e.target.value)}
-                    placeholder={`Option ${String.fromCharCode(65 + index)}`}
-                    className="login-btn"
-                  />
-                  {options.length > 2 && (
-                    <button type="button" onClick={() => removeOption(index)} style={{ marginLeft: 6 }}>
-                      ✖
-                    </button>
-                  )}
-                </div>
-              ))}
-              {options.length < 4 && (
-                <button type="button" onClick={addOption} style={{ marginTop: 8 }}>
-                  + Add Option
-                </button>
-              )}
-              <select
-                value={correctIndex !== null ? correctIndex : ""}
-                onChange={(e) => setCorrectIndex(Number(e.target.value))}
-                required
-                className="dropdown-select"
-                style={{ marginTop: 10 }}
-              >
-                <option value="">Select Correct Answer</option>
-                {options.map((opt, idx) => (
-                  <option key={idx} value={idx}>
-                    {`Option ${String.fromCharCode(65 + idx)} - ${opt || "Empty"}`}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="modal-actions">
-              <button type="button" onClick={closeModal} className="login-btn">
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Alert Modal */}
       <AlertModal
         isOpen={showAlert}
-        onClose={handleAlertClose}
+        onClose={() => {
+          setShowAlert(false);
+          if (alertTitle === "Not Logged In") navigate("/login");
+        }}
         title={alertTitle}
         message={alertMessage}
         confirmText="OK"
