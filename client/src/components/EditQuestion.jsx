@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import AlertModal from "./AlertModal";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
-import "../styles/global/MainStyles.css";
+import "./MainStyles.css";
 
 const EditQuestion = () => {
   const { number } = useParams(); // unique question number
