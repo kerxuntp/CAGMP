@@ -53,15 +53,30 @@ const QuestionsBank = () => {
   useEffect(() => {
     if (!collectionId) return;
     setLoading(true);
-    const url =
-      collectionId === "all"
-        ? `${baseUrl}/questions`
-        : `${baseUrl}/collections/${collectionId}/questions`;
     (async () => {
       try {
-        const res = await fetch(url);
-        const data = await res.json();
-        setQuestions(Array.isArray(data) ? data : data.questions || []);
+        // Always fetch all collections to compute which questions belong to which collections
+        const [questionsRes, collectionsRes] = await Promise.all([
+          fetch(collectionId === "all"
+            ? `${baseUrl}/questions`
+            : `${baseUrl}/collections/${collectionId}/questions`),
+          fetch(`${baseUrl}/collections/`)
+        ]);
+        const questionsData = await questionsRes.json();
+        const collectionsData = await collectionsRes.json();
+        setCollections(collectionsData);
+        // Compute collectionIds for each question
+        let questionsArr = Array.isArray(questionsData) ? questionsData : questionsData.questions || [];
+        // For all view, attach collectionIds to each question
+        if (collectionId === "all") {
+          questionsArr = questionsArr.map(q => {
+            const inCollections = collectionsData
+              .filter(col => Array.isArray(col.questionOrder) && col.questionOrder.includes(q._id))
+              .map(col => col._id);
+            return { ...q, collectionIds: inCollections };
+          });
+        }
+        setQuestions(questionsArr);
       } catch (err) {
         console.error(err);
         setQuestions([]);
@@ -76,10 +91,12 @@ const QuestionsBank = () => {
     return col ? col.name : "Unknown Collection";
   };
 
-  // 🔧 EDIT now uses only the number — no collection context required
-  const handleEdit = (number) => {
-    navigate(`/edit-question/${number}`);
+
+  // Edit now uses question _id
+  const handleEdit = (id) => {
+    navigate(`/edit-question/${id}`);
   };
+
 
   const handleDeleteClick = (q) => {
     setDeleteTarget(q);
@@ -88,32 +105,18 @@ const QuestionsBank = () => {
     setShowConfirmDelete(true);
   };
 
-  const confirmDelete = async () => {
-    const { number, collectionId: legacyColId, collectionIds } = deleteTarget || {};
-    // Keep existing behavior: require a collection in context for deletion
-    const targetCollection =
-      collectionId !== "all" ? collectionId : (legacyColId || (Array.isArray(collectionIds) ? collectionIds[0] : null));
 
-    if (!targetCollection) {
+  const confirmDelete = async () => {
+    const { _id } = deleteTarget || {};
+    if (!_id) {
       setModalTitle("Error");
-      setModalMessage("Collection ID not found for this question.");
+      setModalMessage("Question ID not found.");
       setShowError(true);
     } else {
       try {
-        const res = await fetch(
-          `${baseUrl}/questions/${number}/${targetCollection}`,
-          { method: "DELETE" }
-        );
+        const res = await fetch(`${baseUrl}/questions/${_id}`, { method: "DELETE" });
         if (res.ok) {
-          setQuestions((prev) =>
-            prev.filter((q) => {
-              const inTarget =
-                q.number === number &&
-                (q.collectionId === targetCollection ||
-                 (Array.isArray(q.collectionIds) && q.collectionIds.includes(targetCollection)));
-              return !inTarget;
-            })
-          );
+          setQuestions((prev) => prev.filter((q) => q._id !== _id));
           setModalTitle("Deleted");
           setModalMessage("Question deleted.");
           setShowDeleteSuccess(true);
@@ -146,11 +149,8 @@ const QuestionsBank = () => {
   // Helper for All view badge
   const renderAllViewBadge = (q) => {
     const ids = Array.isArray(q.collectionIds) ? q.collectionIds.map(String) : [];
-    const legacy = q.collectionId ? [String(q.collectionId)] : [];
-    const all = [...new Set([...ids, ...legacy])];
-
-    if (all.length === 0) return null;
-    if (all.length > 1) {
+    if (ids.length === 0) return null;
+    if (ids.length > 1) {
       return (
         <span
           style={{
@@ -175,7 +175,7 @@ const QuestionsBank = () => {
           borderRadius: "4px",
         }}
       >
-        {getCollectionName(all[0])}
+        {getCollectionName(ids[0])}
       </span>
     );
   };
@@ -234,7 +234,7 @@ const QuestionsBank = () => {
             </p>
           </div>
 
-          <div style={{ maxHeight: "65vh", overflowY: "auto" }}>
+          <div style={{ maxHeight: "65vh", overflowY: "auto", width: "80%" }}>
             {questions.length === 0 ? (
               <p>No questions found.</p>
             ) : (
@@ -242,13 +242,15 @@ const QuestionsBank = () => {
                 {questions.map((q, idx) => (
                   <li
                     key={q._id}
-                    onClick={() => handleEdit(q.number)}   
+                    onClick={() => handleEdit(q._id)}
                     style={{
                       background: "#fff",
                       borderRadius: "8px",
                       padding: "10px",
                       marginBottom: "8px",
                       cursor: "pointer",
+                      width: "100%",
+                      boxSizing: "border-box",
                     }}
                   >
                     <div style={{ display: "flex", justifyContent: "space-between" }}>
@@ -270,7 +272,7 @@ const QuestionsBank = () => {
                         style={{ backgroundColor: "#FFC107", color: "#000" }}
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleEdit(q.number);            // 🔧 only number
+                          handleEdit(q._id);
                         }}
                       >
                         Edit

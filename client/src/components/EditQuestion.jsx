@@ -6,7 +6,7 @@ import "../styles/global/MainStyles.css";
 
 
 const EditQuestion = () => {
-  const { number } = useParams(); // unique question number
+  const { id } = useParams(); // question _id
   const navigate = useNavigate();
 
   const [collections, setCollections] = useState([]);
@@ -59,22 +59,14 @@ const EditQuestion = () => {
       return;
     }
 
-    // Load all collections
-    fetch(`${API_BASE_URL}/collections/`)
-      .then((res) => res.json())
-      .then((data) => setCollections(data))
-      .catch(() => {
-        setAlertTitle("Error");
-        setAlertMessage("Failed to load collections.");
-        setAlertType("error");
-        setShowAlert(true);
-      });
-
-    // Load question by number
-    fetch(`${API_BASE_URL}/questions/${Number(number)}`)
-      .then((res) => res.json())
-      .then((result) => {
-        const data = result?.data || result;
+    // Load all collections and question, then compute which collections reference this question
+    Promise.all([
+      fetch(`${API_BASE_URL}/collections/`).then((res) => res.json()),
+      fetch(`${API_BASE_URL}/questions/${id}`).then((res) => res.json())
+    ])
+      .then(([collectionsData, questionResult]) => {
+        setCollections(collectionsData);
+        const data = questionResult?.data || questionResult;
         if (!data || !data.question) throw new Error("No question found");
 
         setQuestion(data.question);
@@ -101,16 +93,21 @@ const EditQuestion = () => {
           setAnswer(openAns);
         }
 
-        setSelectedCollectionIds((data.collectionIds || []).map((id) => id.toString()));
+        // Compute which collections reference this question
+        const qid = data._id || id;
+        const inCollections = Array.isArray(collectionsData)
+          ? collectionsData.filter(col => Array.isArray(col.questionOrder) && col.questionOrder.includes(qid)).map(col => col._id.toString())
+          : [];
+        setSelectedCollectionIds(inCollections);
         originalData.current = data;
       })
       .catch(() => {
         setAlertTitle("Error");
-        setAlertMessage("Failed to load question.");
+        setAlertMessage("Failed to load question or collections.");
         setAlertType("error");
         setShowAlert(true);
       });
-  }, [number, navigate]);
+  }, [id, navigate]);
 
   const handleTypeChange = (e) => {
     const newType = e.target.value;
@@ -272,7 +269,7 @@ const EditQuestion = () => {
     if (deleteImage) formData.append("deleteImage", "true");
 
     try {
-      const res = await fetch(`${API_BASE_URL}/questions/${number}`, {
+      const res = await fetch(`${API_BASE_URL}/questions/${id}`, {
         method: "PATCH",
         body: formData,
       });

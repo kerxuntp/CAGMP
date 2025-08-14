@@ -8,69 +8,45 @@ const router = express.Router();
 const upload = multer({ dest: 'uploads/' });
 
 /**
- * GET all questions
- * Optional: /questions?collectionId=xxx
+ * GET all questions or questions for a collection
+ * /questions?collectionId=xxx
  */
 router.get('/', async (req, res) => {
   try {
     const { collectionId } = req.query;
-    let filter = {};
-
     if (collectionId) {
       const trimmedId = collectionId.trim();
       if (!mongoose.Types.ObjectId.isValid(trimmedId)) {
         return res.status(400).json({ message: `Invalid collectionId: ${trimmedId}` });
       }
-      filter = { collectionIds: new mongoose.Types.ObjectId(trimmedId) };
+      const collection = await Collection.findById(trimmedId).populate('questionOrder');
+      if (!collection) {
+        return res.status(404).json({ message: 'Collection not found.' });
+      }
+      return res.status(200).json(collection.questionOrder);
     }
-
-    const questions = await Question.find(filter);
+    // No collectionId: return all questions
+    const questions = await Question.find();
     res.status(200).json(questions);
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
 
-/**
- * GET specific question by number and collectionId
- */
-router.get('/:number/:collectionId', async (req, res) => {
-  try {
-    const { number, collectionId } = req.params;
-    const trimmedId = collectionId.trim();
-
-    if (!mongoose.Types.ObjectId.isValid(trimmedId)) {
-      return res.status(400).json({ message: `Invalid collectionId: ${trimmedId}` });
-    }
-
-    const question = await Question.findOne({
-      number: parseInt(number),
-      collectionIds: { $in: [new mongoose.Types.ObjectId(trimmedId)] },
-    });
-
-    if (!question) {
-      return res.status(404).json({ message: 'Question not found in this collection.' });
-    }
-
-    res.status(200).json({ message: 'Record found', data: question });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
-  }
-});
 
 /**
- * GET specific question by number (unambiguous)
+ * GET specific question by _id
  */
-router.get('/:number', async (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
-    const { number } = req.params;
-
-    const question = await Question.findOne({ number: parseInt(number) });
-
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: `Invalid question id: ${id}` });
+    }
+    const question = await Question.findById(id);
     if (!question) {
       return res.status(404).json({ message: 'Question not found.' });
     }
-
     res.status(200).json({ message: 'Record found', data: question });
   } catch (err) {
     res.status(500).json({ message: 'Server error', error: err.message });
@@ -78,7 +54,7 @@ router.get('/:number', async (req, res) => {
 });
 
 
-// POST create question — per-collection question numbers
+// POST create question — shared-question model
 router.post('/', upload.single('image'), async (req, res) => {
   try {
     let { question, hint, answer, funFact, type, options } = req.body;
@@ -125,49 +101,40 @@ router.post('/', upload.single('image'), async (req, res) => {
 
     const imgPath = req.file ? req.file.path : undefined;
 
-    // For each collection, create a separate question with the next available number
-    const createdQuestions = [];
-    for (const collectionId of validCollectionIds) {
-      // Find all numbers used in this collection
-      const usedNumbers = new Set(
-        (await Question.find({ collectionId }).select('number')).map(q => q.number)
-      );
-      let nextNumber = 1;
-      while (usedNumbers.has(nextNumber)) nextNumber++;
+    // Create a single question document
+    const doc = await Question.create({
+      question,
+      hint,
+      funFact,
+      type,
+      ...(type === 'mcq' ? { options: parsedOptions } : {}),
+      answer: parsedAnswer,
+      ...(imgPath ? { image: imgPath } : {}),
+    });
 
-      const doc = await Question.create({
-        number: nextNumber,
-        collectionId,
-        question,
-        hint,
-        funFact,
-        type,
-        ...(type === 'mcq' ? { options: parsedOptions } : {}),
-        answer: parsedAnswer,
-        ...(imgPath ? { image: imgPath } : {}),
-      });
+    // Add to each collection's questionOrder
+    await Promise.all(validCollectionIds.map(collectionId =>
+      Collection.findByIdAndUpdate(collectionId, { $addToSet: { questionOrder: doc._id } }, { runValidators: true })
+    ));
 
-      // Add to collection's questionOrder
-      await Collection.findByIdAndUpdate(collectionId, { $addToSet: { questionOrder: doc._id } }, { runValidators: true });
-
-      createdQuestions.push(doc);
-    }
-
-    res.status(201).json({ message: 'Questions created', questions: createdQuestions });
+    res.status(201).json({ message: 'Question created and added to collections', question: doc });
   } catch (err) {
     res.status(500).json({ message: 'Server error while creating question', error: err.message });
   }
 });
 
-/**
- * NEW: PATCH update by number (no collectionId in URL)
- */
-router.patch('/:number', upload.single('image'), async (req, res) => {
-  try {
-    const { number } = req.params;
-    const { question, hint, funFact, type, answer, options, deleteImage, collectionIds } = req.body;
 
-    const questionDoc = await Question.findOne({ number: parseInt(number) });
+/**
+ * PATCH update question by _id
+ */
+router.patch('/:id', upload.single('image'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { question, hint, funFact, type, answer, options, deleteImage, collectionIds } = req.body;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: `Invalid question id: ${id}` });
+    }
+    const questionDoc = await Question.findById(id);
     if (!questionDoc) {
       return res.status(404).json({ message: 'Question not found.' });
     }
@@ -179,7 +146,6 @@ router.patch('/:number', upload.single('image'), async (req, res) => {
         try { parsedIds = JSON.parse(parsedIds); }
         catch { parsedIds = [collectionIds]; }
       }
-
       const validIds = parsedIds.map((id) => {
         const clean = String(id).trim();
         if (!mongoose.Types.ObjectId.isValid(clean)) {
@@ -187,19 +153,11 @@ router.patch('/:number', upload.single('image'), async (req, res) => {
         }
         return new mongoose.Types.ObjectId(clean);
       });
-
-      const prev = questionDoc.collectionIds.map(String);
-      const next = validIds.map(String);
-
-      const removed = prev.filter(id => !next.includes(id));
-      const added   = next.filter(id => !prev.includes(id));
-
-      await Promise.all([
-        ...removed.map(id => Collection.findByIdAndUpdate(id, { $pull: { questionOrder: questionDoc._id } })),
-        ...added.map(id   => Collection.findByIdAndUpdate(id, { $addToSet: { questionOrder: questionDoc._id } })),
-      ]);
-
-      questionDoc.collectionIds = validIds;
+      // Remove from all collections first
+      await Collection.updateMany({}, { $pull: { questionOrder: questionDoc._id } });
+      // Add to selected collections
+      await Promise.all(validIds.map(id => Collection.findByIdAndUpdate(id, { $addToSet: { questionOrder: questionDoc._id } }))); 
+      // Do NOT update any collectionIds field on the question itself (shared-question model)
     }
 
     if (question) questionDoc.question = question.trim();
@@ -244,117 +202,26 @@ router.patch('/:number', upload.single('image'), async (req, res) => {
   }
 });
 
-/**
- * PATCH update question (legacy path by number + collectionId) — kept
- */
-router.patch('/:number/:collectionId', upload.single('image'), async (req, res) => {
-  try {
-    const { number, collectionId } = req.params;
-    const trimmedId = collectionId.trim();
-    const { question, hint, funFact, type, answer, options, deleteImage, collectionIds } = req.body;
 
-    if (!mongoose.Types.ObjectId.isValid(trimmedId)) {
-      return res.status(400).json({ message: `Invalid collectionId: ${trimmedId}` });
-    }
+// Legacy PATCH by number/collectionId removed for shared-question model
 
-    const questionDoc = await Question.findOne({
-      number: parseInt(number),
-      collectionIds: { $in: [new mongoose.Types.ObjectId(trimmedId)] },
-    });
-
-    if (!questionDoc) {
-      return res.status(404).json({ message: 'Question not found in this collection.' });
-    }
-
-    // Update collections if provided
-    if (collectionIds) {
-      let parsedIds = [];
-      try { parsedIds = JSON.parse(collectionIds); }
-      catch { parsedIds = [collectionIds]; }
-
-      const validIds = parsedIds.map((id) => {
-        const clean = id.trim();
-        if (!mongoose.Types.ObjectId.isValid(clean)) {
-          throw new Error(`Invalid collection ID: ${clean}`);
-        }
-        return new mongoose.Types.ObjectId(clean);
-      });
-
-      const removed = questionDoc.collectionIds.filter(id => !validIds.map(String).includes(id.toString()));
-      const added = validIds.filter(id => !questionDoc.collectionIds.map(String).includes(id.toString()));
-
-      await Promise.all([
-        ...removed.map(id => Collection.findByIdAndUpdate(id, { $pull: { questionOrder: questionDoc._id } })),
-        ...added.map(id => Collection.findByIdAndUpdate(id, { $addToSet: { questionOrder: questionDoc._id } })),
-      ]);
-
-      questionDoc.collectionIds = validIds;
-    }
-
-    if (question) questionDoc.question = question.trim();
-    if (hint) questionDoc.hint = hint.trim();
-    if (funFact) questionDoc.funFact = funFact.trim();
-    if (type) questionDoc.type = type;
-    if (answer) {
-      try { questionDoc.answer = JSON.parse(answer); }
-      catch { return res.status(400).json({ message: 'Invalid JSON in "answer"' }); }
-    }
-    if (options) {
-      try { questionDoc.options = JSON.parse(options); }
-      catch { return res.status(400).json({ message: 'Invalid JSON in "options"' }); }
-    }
-
-    if (req.file) {
-      questionDoc.image = req.file.path;
-    } else if (deleteImage === 'true') {
-      questionDoc.image = null;
-    }
-
-    await questionDoc.save();
-    res.status(200).json({ message: 'Question updated successfully.' });
-  } catch (err) {
-    res.status(500).json({ message: 'Error updating question', error: err.message });
-  }
-});
 
 /**
- * DELETE question from one collection
- * - removes mapping from that collection
- * - deletes the doc only if no collections remain
+ * DELETE question by _id
+ * - removes the question from all collections' questionOrder
+ * - deletes the question document
  */
-router.delete('/:number/:collectionId', async (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
-    const { number, collectionId } = req.params;
-    const trimmedId = collectionId.trim();
-
-    if (!mongoose.Types.ObjectId.isValid(trimmedId)) {
-      return res.status(400).json({ message: `Invalid collectionId: ${trimmedId}` });
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: `Invalid question id: ${id}` });
     }
-    const collObjId = new mongoose.Types.ObjectId(trimmedId);
-
-    const question = await Question.findOne({
-      number: parseInt(number),
-      collectionIds: collObjId,
-    });
-
-    if (!question) {
-      return res.status(404).json({ message: 'Question not found in this collection.' });
-    }
-
-    // Pull the question from this collection's questionOrder
-    await Collection.findByIdAndUpdate(collObjId, { $pull: { questionOrder: question._id } }, { runValidators: true });
-
-    // Remove the collection from the question's collectionIds
-    question.collectionIds = question.collectionIds.filter(id => id.toString() !== collObjId.toString());
-
-    if (question.collectionIds.length === 0) {
-      // No collections left → delete the whole question
-      await Question.deleteOne({ _id: question._id });
-      return res.status(200).json({ message: 'Question deleted (no collections left).' });
-    }
-
-    await question.save();
-    res.status(200).json({ message: 'Question removed from collection.' });
+    // Remove from all collections
+    await Collection.updateMany({}, { $pull: { questionOrder: new mongoose.Types.ObjectId(id) } });
+    // Delete the question
+    await Question.findByIdAndDelete(id);
+    res.status(200).json({ message: 'Question deleted from all collections.' });
   } catch (err) {
     res.status(500).json({ message: 'Error deleting question', error: err.message });
   }

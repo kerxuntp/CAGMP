@@ -139,10 +139,12 @@ const QuestionPage = () => {
       }
       const settingsData = await settingsResponse.json();
       setGameSettings(settingsData);
+      console.log("Fetched settings:", settingsData);
 
       // Fetch collection details to get the code
       const collectionRes = await fetch(`${baseUrl}/collections/${collectionId}`);
       const collection = await collectionRes.json();
+      console.log("Fetched collection:", collection);
 
       if (!collection) {
         setError("Collection not found or is offline.");
@@ -161,6 +163,7 @@ const QuestionPage = () => {
         }
         const data = await response.json();
         fetchedQuestions = Array.isArray(data) ? data : data.questions || [];
+        console.log("Fetched questions from /collections/:id/questions:", fetchedQuestions);
       } else {
         const res = await fetch(`${baseUrl}/questions?collectionId=${collectionId}`);
         if (!res.ok) {
@@ -171,6 +174,7 @@ const QuestionPage = () => {
         }
         const data = await res.json();
         fetchedQuestions = data;
+        console.log("Fetched questions from /questions?collectionId=:", fetchedQuestions);
       }
 
       // Check if collection has no questions
@@ -187,10 +191,12 @@ const QuestionPage = () => {
         const n = fetchedQuestions.length;
         const rotated = fetchedQuestions.map((_, i) => fetchedQuestions[(i + playerIndex) % n]);
         setQuestions(rotated);
+        console.log("Rotated questions:", rotated);
       } else if (settingsData && settingsData.gameMode === 'rotating-reverse') {
         const n = fetchedQuestions.length;
         const rotated = fetchedQuestions.map((_, i) => fetchedQuestions[(i - playerIndex - 1 + n) % n]);
         setQuestions(rotated);
+        console.log("Rotated-reverse questions:", rotated);
       } else if (settingsData && settingsData.gameMode === 'random') {
         const shuffled = [...fetchedQuestions];
         for (let i = shuffled.length - 1; i > 0; i--) {
@@ -198,8 +204,10 @@ const QuestionPage = () => {
           [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
         }
         setQuestions(shuffled);
+        console.log("Shuffled questions:", shuffled);
       } else {
         setQuestions(fetchedQuestions);
+        console.log("Set questions (no mode):", fetchedQuestions);
       }
 
       setLoading(false);

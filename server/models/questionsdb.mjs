@@ -2,16 +2,8 @@
 import mongoose from 'mongoose';
 
 const questionSchema = new mongoose.Schema({
-  number: {
-    type: Number,
-    required: true,
-  },
-  collectionId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Collection",
-    required: true,
-    index: true,
-  },
+  // Removed number field; question order is managed per collection
+  // Removed collectionId: questions are now shared and referenced by collections
   question: {
     type: String,
     required: true,
@@ -44,8 +36,7 @@ const questionSchema = new mongoose.Schema({
 });
 
 
-// Add compound unique index for (number, collectionId)
-questionSchema.index({ number: 1, collectionId: 1 }, { unique: true });
+// No compound index needed; questions are shared and referenced by collections
 
 const Question = mongoose.model('Question', questionSchema);
 export default Question;

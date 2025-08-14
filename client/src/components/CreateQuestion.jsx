@@ -78,16 +78,12 @@ const CreateQuestion = () => {
     setIsSubmitting(true);
 
     try {
-      // Basic validation
-  // No manual number field, backend will auto-assign
+      // Basic validation (allow questions without a collection)
       if (!question.trim()) {
         return showError("Invalid Input", "Please enter a question.");
       }
       if (question.length > 1500) {
         return showError("Too Long", "Question description must not exceed 1500 characters.");
-      }
-      if (selectedCollectionIds.length === 0) {
-        return showError("Invalid Input", "Please select at least one collection.");
       }
       if (!hint.trim() || !funFact.trim()) {
         return showError("Missing Fields", "Hint and fun fact cannot be empty.");
@@ -116,11 +112,8 @@ const CreateQuestion = () => {
         }
       }
 
-  // No precheck for number needed
-
       // Build payload
       const formData = new FormData();
-  // Do not send number, backend will assign
       formData.append(
         "collectionIds",
         JSON.stringify(selectedCollectionIds.map((id) => id.trim()))
@@ -149,13 +142,12 @@ const CreateQuestion = () => {
         return showError("Error", data.message || "Could not add question.");
       }
 
-  setAlertTitle("Success");
-  setAlertMessage("Question added successfully!");
-  setAlertType("success");
-  setShowAlert(true);
+      setAlertTitle("Success");
+      setAlertMessage("Question added successfully!");
+      setAlertType("success");
+      setShowAlert(true);
 
       // Reset form
-  // No number to reset
       setSelectedCollectionIds([]);
       setQuestion("");
       setHint("");
