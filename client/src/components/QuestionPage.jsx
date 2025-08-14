@@ -6,6 +6,7 @@ import "../styles/pages/QuestionPage.css";
 
 const QuestionPage = () => {
   const baseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+  const finishCalled = useRef(false);
   // --- State and refs ---
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(
@@ -289,16 +290,19 @@ const QuestionPage = () => {
       : [currentQuestion.answer];
 
     const isCorrect = acceptableAnswers
-  .map(ans => ans.toLowerCase().trim())
-  .includes(input);
+      .map(ans => ans.toLowerCase().trim())
+      .includes(input);
 
+    const isLast = currentIndex === questions.length - 1;
 
     if (isCorrect) {
-      setCorrectAnswers((prev) => {
-        const newVal = prev + 1;
-        sessionStorage.setItem("correctAnswers", newVal.toString());
-        return newVal;
-      });
+      if (!isLast) {
+        setCorrectAnswers((prev) => {
+          const newVal = prev + 1;
+          sessionStorage.setItem("correctAnswers", newVal.toString());
+          return newVal;
+        });
+      }
       setUserAnswer("");
       const funFact = questions[currentIndex].funFact || "No fun fact available.";
       showAnswerInfo("Correct!", funFact, "success");
@@ -354,8 +358,15 @@ const QuestionPage = () => {
   };
 
   const handleFinish = async (answeredLast) => {
+    if (finishCalled.current) return;
+    finishCalled.current = true;
     setQuizComplete(true);
-    const finalCorrect = correctAnswers + (answeredLast ? 1 : 0);
+    let finalCorrect = correctAnswers;
+    if (answeredLast) {
+      finalCorrect = correctAnswers + 1;
+      setCorrectAnswers(finalCorrect);
+      sessionStorage.setItem("correctAnswers", finalCorrect.toString());
+    }
     const rawTime = Math.floor((Date.now() - startTime.current) / 1000);
     const finalTime = Math.max(0, rawTime + timePenalty.current);
 
@@ -600,7 +611,7 @@ const QuestionPage = () => {
       </div>
 
       {/* Submit button */}
-      <div className="game-submit-section">
+      <div className="game-submit-section" style={{ marginTop: "-25px" }}>
         <button
           onClick={handleSubmit}
           className="game-submit-button"

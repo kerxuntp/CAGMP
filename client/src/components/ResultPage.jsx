@@ -62,9 +62,10 @@ export default function ResultPage() {
     return `${h}h ${m}m ${s}s`;
   };
 
-  // Format current date and time for display
-  const getCurrentDateTime = () => {
-    const date = new Date();
+  // Format finishedAt date and time for display
+  const getFinishedDateTime = () => {
+    if (!player || !player.finishedAt) return { formattedDate: '', formattedTime: '' };
+    const date = new Date(player.finishedAt);
     const formattedDate = date.toLocaleDateString("en-SG", {
       year: "numeric",
       month: "long",
@@ -105,7 +106,17 @@ export default function ResultPage() {
   };
 
   // Show loader while fetching player info
-  if (loading) return <Loading />;
+  if (loading) {
+    return (
+      <div className="page-container">
+        <img src="/images/waterfall.jpg" alt="Background" className="page-background" />
+        <div className="page-overlay" />
+        <div className="page-content" style={{ textAlign: "center" }}>
+          <Loading />
+        </div>
+      </div>
+    );
+  }
 
   // Error fallback
   if (error) {
@@ -131,7 +142,7 @@ export default function ResultPage() {
     );
   }
 
-  const { formattedDate, formattedTime } = getCurrentDateTime();
+  const { formattedDate, formattedTime } = getFinishedDateTime();
   const totalTime = player.totalTimeInSeconds || 0;
 
   return (
@@ -192,7 +203,7 @@ export default function ResultPage() {
           color: "#333",
           fontSize: "16px"
         }}>
-          {formattedDate}, {formattedTime}
+          Completed: {formattedDate}, {formattedTime}
         </p>
       </div>
 

@@ -1,3 +1,4 @@
+import Loading from './Loading';
 import React, { useEffect, useState } from "react";
 import '../styles/global/MainStyles.css';
 import '../styles/pages/LeaderboardStyles.css'; 
@@ -26,7 +27,6 @@ function isWithin(date, filter) {
 
 export default function LeaderboardPage() {
   const [players, setPlayers] = useState([]);
-  const [currentPlayer, setCurrentPlayer] = useState(null);
   const [collectionName, setCollectionName] = useState("");
   const [filter, setFilter] = useState("all");
   const [page, setPage] = useState(0);
@@ -48,7 +48,6 @@ export default function LeaderboardPage() {
 
         const currentPlayerRes = await fetch(`${API_BASE_URL}/players/${currentPlayerId}`);
         const currentPlayerData = await currentPlayerRes.json();
-        setCurrentPlayer(currentPlayerData);
 
         // Get all players and collections
         const [playersRes, collectionsRes] = await Promise.all([
@@ -61,7 +60,7 @@ export default function LeaderboardPage() {
           collectionsRes.json(),
         ]);
 
-        // ✅ Filter to only show players from the same collection who have finished
+        // Filter to only show players from the same collection who have finished
         const finishedPlayersFromSameCollection = playersData.filter(p => 
           p.finishedAt && p.collectionId === currentPlayerData.collectionId
         );
@@ -109,28 +108,15 @@ export default function LeaderboardPage() {
     year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
   });
 
+
+
   if (loading) {
     return (
       <div className="page-container">
         <img src="/images/waterfall.jpg" alt="Background" className="page-background" />
         <div className="page-overlay"></div>
-        <div className="page-content" style={{ textAlign: "center" }}>
-          <p>Loading leaderboard...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!currentPlayer) {
-    return (
-      <div className="page-container">
-        <img src="/images/waterfall.jpg" alt="Background" className="page-background" />
-        <div className="page-overlay"></div>
-        <div className="page-content" style={{ textAlign: "center" }}>
-          <h2>Error: Player not found</h2>
-          <button className="return-button" onClick={() => window.history.back()}>
-            Return
-          </button>
+        <div className="page-content leaderboard-page" style={{ textAlign: "center" }}>
+          <Loading />
         </div>
       </div>
     );
@@ -144,7 +130,7 @@ export default function LeaderboardPage() {
       <div className="page-content leaderboard-page">
         <h1 className="leaderboard-title">Leaderboard</h1>
         
-        {/* ✅ Show which collection this leaderboard is for */}
+        {/* Show which collection this leaderboard is for */}
         <h3 style={{ 
           textAlign: "center", 
           color: "#2196F3", 
@@ -154,7 +140,7 @@ export default function LeaderboardPage() {
           {collectionName} Collection
         </h3>
 
-        {/* ✅ Only time filter, no collection filter needed */}
+        {/* Only time filter*/}
         <div style={{ display: "flex", justifyContent: "center", marginBottom: "20px" }}>
           <select
             value={filter}
@@ -199,7 +185,7 @@ export default function LeaderboardPage() {
                     rank === 1 ? "silver" :
                     rank === 2 ? "bronze" : "";
 
-                  // ✅ Add subtle background for non-podium, non-current players
+                  // Add subtle background for non-podium, non-current players
                   const getRowStyle = () => {
                     if (highlight || isCurrent) return {}; // Keep existing styling for podium/current
                     return { backgroundColor: "rgba(255, 255, 255, 0.40)" }; // Subtle translucent background
@@ -218,7 +204,7 @@ export default function LeaderboardPage() {
                         {player.username}
                         {isCurrent && <span className="you-indicator"> ← You</span>}
 
-                        {/* ✅ Simplified tooltip - only show completion date */}
+                        {/* Simplified tooltip - only show completion date */}
                         {hoveredPlayerId === player._id && (
                           <div className="player-tooltip">
                             <div><strong>Completed:</strong> {formatDate(player.finishedAt)}</div>
