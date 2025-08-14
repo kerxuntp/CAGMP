@@ -77,13 +77,11 @@ router.get('/:number', async (req, res) => {
   }
 });
 
-/**
- * POST create question  — Upsert by number & merge collectionIds (ONE doc per question)
- */
-// POST create question — auto-increment number if not provided, shared among collections
+
+// POST create question — per-collection question numbers
 router.post('/', upload.single('image'), async (req, res) => {
   try {
-    let { number, question, hint, answer, funFact, type, options } = req.body;
+    let { question, hint, answer, funFact, type, options } = req.body;
     let collectionIds = req.body.collectionIds;
 
     if (!question || !hint || !funFact || !type) {
@@ -94,7 +92,7 @@ router.post('/', upload.single('image'), async (req, res) => {
       return res.status(400).json({ message: 'At least one collection must be selected.' });
     }
 
-    // Normalize collectionIds (supports JSON string or array)
+    // Normalize collectionIds
     if (!Array.isArray(collectionIds)) {
       try { collectionIds = JSON.parse(collectionIds); }
       catch { collectionIds = [collectionIds]; }
@@ -127,42 +125,19 @@ router.post('/', upload.single('image'), async (req, res) => {
 
     const imgPath = req.file ? req.file.path : undefined;
 
-    // If number is not provided, auto-assign the lowest available number not taken in any selected collection
-    if (!number || isNaN(Number(number))) {
-      // Find all numbers used in any of the selected collections
-      const usedNumbers = new Set();
-      const questions = await Question.find({ collectionIds: { $in: validCollectionIds } }).select('number');
-      questions.forEach(q => usedNumbers.add(q.number));
+    // For each collection, create a separate question with the next available number
+    const createdQuestions = [];
+    for (const collectionId of validCollectionIds) {
+      // Find all numbers used in this collection
+      const usedNumbers = new Set(
+        (await Question.find({ collectionId }).select('number')).map(q => q.number)
+      );
       let nextNumber = 1;
       while (usedNumbers.has(nextNumber)) nextNumber++;
-      number = nextNumber;
-    }
 
-    // Upsert by number (ONE doc per question)
-    let doc = await Question.findOne({ number: parseInt(number) });
-
-    if (doc) {
-      // Merge collections (set-union)
-      const current = new Set(doc.collectionIds.map(String));
-      validCollectionIds.forEach(id => current.add(String(id)));
-      doc.collectionIds = Array.from(current).map(id => new mongoose.Types.ObjectId(id));
-
-      // Update fields
-      doc.question = question;
-      doc.hint     = hint;
-      doc.funFact  = funFact;
-      doc.type     = type;
-      if (type === 'mcq') doc.options = parsedOptions;
-      else doc.options = undefined;
-      doc.answer   = parsedAnswer;
-      if (imgPath) doc.image = imgPath;
-
-      await doc.save();
-    } else {
-      // Create fresh doc
-      doc = await Question.create({
-        number: parseInt(number),
-        collectionIds: validCollectionIds,
+      const doc = await Question.create({
+        number: nextNumber,
+        collectionId,
         question,
         hint,
         funFact,
@@ -171,16 +146,14 @@ router.post('/', upload.single('image'), async (req, res) => {
         answer: parsedAnswer,
         ...(imgPath ? { image: imgPath } : {}),
       });
+
+      // Add to collection's questionOrder
+      await Collection.findByIdAndUpdate(collectionId, { $addToSet: { questionOrder: doc._id } }, { runValidators: true });
+
+      createdQuestions.push(doc);
     }
 
-    // Keep questionOrder in each collection synced
-    await Promise.all(
-      doc.collectionIds.map((id) =>
-        Collection.findByIdAndUpdate(id, { $addToSet: { questionOrder: doc._id } }, { runValidators: true })
-      )
-    );
-
-    res.status(201).json(doc);
+    res.status(201).json({ message: 'Questions created', questions: createdQuestions });
   } catch (err) {
     res.status(500).json({ message: 'Server error while creating question', error: err.message });
   }

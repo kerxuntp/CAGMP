@@ -162,11 +162,18 @@ const GetCollection = () => {
     // Check if this is the last collection for this question
     const allCollectionIds = Array.isArray(q.collectionIds) ? q.collectionIds : (q.collectionId ? [q.collectionId] : []);
     const isLastCollection = allCollectionIds.length <= 1;
+    // Determine game question number if questionOrder is present
+    let gameQNum = null;
+    if (selectedCollection && Array.isArray(selectedCollection.questionOrder) && selectedCollection.questionOrder.length > 0) {
+      const idx = questions.findIndex(qq => qq._id === q._id);
+      if (idx !== -1) gameQNum = idx + 1;
+    }
+    const qLabel = gameQNum ? `Game Q${gameQNum}` : `Q${q.number}`;
     setModalTitle("Remove from Collection");
     setModalMessage(
       isLastCollection
-        ? `Q${q.number} only belongs to this collection. Removing it will also delete it from the database. Are you sure you want to proceed?`
-        : `Remove Q${q.number} from this collection?`
+        ? `${qLabel} only belongs to this collection. Removing it will also delete it from the database. Are you sure you want to proceed?`
+        : `Remove ${qLabel} from this collection?`
     );
     setOnConfirmAction(() => async () => {
       try {

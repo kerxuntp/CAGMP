@@ -173,7 +173,15 @@ const CreateQuestion = () => {
   };
 
   if (loading) {
-    return <Loading />;
+    return (
+      <div className="login-container">
+        <img src="/images/changihome.jpg" alt="Background" className="background-image" />
+        <div className="page-overlay"></div>
+        <div className="page-content scrollable-container" style={{ textAlign: "center" }}>
+          <Loading />
+        </div>
+      </div>
+    );
   }
 
   return (
