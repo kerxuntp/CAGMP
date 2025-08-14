@@ -1,18 +1,17 @@
 import express from 'express';
 import Collection from '../models/collectiondb.mjs';
-import Question from "../models/questionsdb.mjs";
 import GlobalSettings from "../models/globalSettingsdb.mjs";
 import Player from "../models/playerdb.mjs";
 
 
 const router = express.Router();
 
-// Get all collections
+// Get all collections (shared-question model: use questionOrder for count)
 router.get('/', async (req, res) => {
   try {
     const collections = await Collection.find({}).lean();
     for (const col of collections) {
-      col.questionCount = await Question.countDocuments({ collectionId: col._id });
+      col.questionCount = Array.isArray(col.questionOrder) ? col.questionOrder.length : 0;
     }
     res.status(200).json(collections);
   } catch (error) {
@@ -20,19 +19,14 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Get all collections with their questions
+// Get all collections with their questions (shared-question model)
 router.get('/with-questions', async (req, res) => {
   try {
-    const collections = await Collection.aggregate([
-      {
-        $lookup: {
-          from: "questions",
-          localField: "_id",
-          foreignField: "collectionId",
-          as: "questions"
-        }
-      }
-    ]);
+    const collections = await Collection.find({}).populate('questionOrder').lean();
+    for (const col of collections) {
+      col.questions = Array.isArray(col.questionOrder) ? col.questionOrder : [];
+      col.questionCount = col.questions.length;
+    }
     res.status(200).json(collections);
   } catch (error) {
     res.status(500).json({ message: "Aggregation failed", error: error.message });
@@ -82,23 +76,12 @@ router.get('/:id', async (req, res) => {
 router.get('/:id/questions', async (req, res) => {
   try {
     const collection = await Collection.findById(req.params.id).populate('questionOrder');
-
     if (!collection) {
       return res.status(404).json({ message: 'Collection not found' });
     }
-
-    let questions;
-    if (collection.questionOrder?.length) {
-      questions = collection.questionOrder;
-    } else {
-      questions = await Question.find({ collectionId: collection._id });
-    }
-
-    res.status(200).json({
-      collection: collection.name,
-      code: collection.code,
-      questions
-    });
+    // Always use questionOrder for shared-question model
+    const questions = Array.isArray(collection.questionOrder) ? collection.questionOrder : [];
+    res.status(200).json(questions);
   } catch (error) {
     res.status(500).json({ message: 'Failed to fetch questions', error: error.message });
   }

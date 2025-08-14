@@ -151,17 +151,14 @@ const GetCollection = () => {
   };
 
   const handleDeleteQuestionClick = (q) => {
-    // Use q.collectionId if present, else fallback to selectedCollection._id
-    const collectionId = q.collectionId || selectedCollection?._id;
+    // Always use selectedCollection._id for removal
+    const collectionId = selectedCollection?._id;
     if (!collectionId) {
       setModalTitle("Error");
       setModalMessage("Invalid collectionId: undefined");
       setShowErrorModal(true);
       return;
     }
-    // Check if this is the last collection for this question
-    const allCollectionIds = Array.isArray(q.collectionIds) ? q.collectionIds : (q.collectionId ? [q.collectionId] : []);
-    const isLastCollection = allCollectionIds.length <= 1;
     // Determine question label: always use index+1 for display
     let qLabel = "";
     if (selectedCollection && Array.isArray(selectedCollection.questionOrder) && selectedCollection.questionOrder.length > 0) {
@@ -172,27 +169,17 @@ const GetCollection = () => {
       qLabel = idx !== -1 ? `Question ${idx + 1}` : "Question";
     }
     setModalTitle("Remove from Collection");
-    setModalMessage(
-      isLastCollection
-        ? `${qLabel} only belongs to this collection. Removing it will also delete it from the database. Are you sure you want to proceed?`
-        : `Remove ${qLabel} from this collection?`
-    );
+    setModalMessage(`Remove ${qLabel} from this collection?`);
     setOnConfirmAction(() => async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/questions/${q.number}/${collectionId}`, {
+        // Use q._id instead of q.number for DELETE endpoint
+        const res = await fetch(`${API_BASE_URL}/questions/${q._id}/${collectionId}`, {
           method: "DELETE"
         });
         if (res.ok) {
           setQuestions((prev) => prev.filter((item) => item._id !== q._id));
-          // Check if the question was deleted from the DB (no collections left)
-          const data = await res.json();
-          if (data.message && data.message.includes('deleted (no collections left)')) {
-            setModalTitle("Deleted");
-            setModalMessage("Question removed from this collection and deleted from the database (no collections left).");
-          } else {
-            setModalTitle("Removed");
-            setModalMessage("Question removed from this collection.");
-          }
+          setModalTitle("Removed");
+          setModalMessage("Question removed from this collection.");
           setShowSuccessModal(true);
         } else {
           const data = await res.json();
@@ -291,7 +278,7 @@ const GetCollection = () => {
               ) : (
                 <ul style={{ listStyle: "none", padding: 0 }}>
                   {questions.map((q, i) => (
-                    <li key={q._id} onClick={() => navigate(`/edit-question/${q.number}/${q.collectionId}`)} style={{ background: "#fff", borderRadius: "8px", padding: "10px", marginBottom: "8px", cursor: "pointer" }}>
+                    <li key={q._id} onClick={() => navigate(`/edit-question/${q._id}`)} style={{ background: "#fff", borderRadius: "8px", padding: "10px", marginBottom: "8px", cursor: "pointer" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
                         <strong>
                           {`Game Q${i + 1}`}
@@ -299,7 +286,7 @@ const GetCollection = () => {
                       </div>
                       <p style={{ marginBottom: "8px" }}>{q.question}</p>
                       <div style={{ display: "flex", gap: "8px" }}>
-                        <button className="login-btn" style={{ backgroundColor: "#FFC107", color: "#000", padding: "5px 10px", fontSize: "14px" }} onClick={(e) => { e.stopPropagation(); navigate(`/edit-question/${q.number}/${q.collectionId}`); }}>
+                        <button className="login-btn" style={{ backgroundColor: "#FFC107", color: "#000", padding: "5px 10px", fontSize: "14px" }} onClick={(e) => { e.stopPropagation(); navigate(`/edit-question/${q._id}`); }}>
                           Edit
                         </button>
                         <button className="login-btn" style={{ background: "#DC3545", color: "#fff", padding: "5px 10px", fontSize: "14px" }} onClick={(e) => { e.stopPropagation(); handleDeleteQuestionClick(q); }}>

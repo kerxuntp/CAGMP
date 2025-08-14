@@ -227,4 +227,33 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+/**
+ * DELETE question from a specific collection (shared-question model)
+ * - removes the question from the collection's questionOrder
+ * - does NOT delete the question document
+ */
+router.delete('/:questionId/:collectionId', async (req, res) => {
+  try {
+    const { questionId, collectionId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(questionId)) {
+      return res.status(400).json({ message: `Invalid question id: ${questionId}` });
+    }
+    if (!mongoose.Types.ObjectId.isValid(collectionId)) {
+      return res.status(400).json({ message: `Invalid collection id: ${collectionId}` });
+    }
+    // Remove the question from the collection's questionOrder
+    const updated = await Collection.findByIdAndUpdate(
+      collectionId,
+      { $pull: { questionOrder: new mongoose.Types.ObjectId(questionId) } },
+      { new: true }
+    );
+    if (!updated) {
+      return res.status(404).json({ message: 'Collection not found.' });
+    }
+    res.status(200).json({ message: 'Question removed from collection.' });
+  } catch (err) {
+    res.status(500).json({ message: 'Error removing question from collection', error: err.message });
+  }
+});
+
 export default router;
