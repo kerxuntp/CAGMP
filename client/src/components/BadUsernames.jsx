@@ -219,7 +219,7 @@ const BadUsernames = () => {
             className="login-btn"
             style={{
               backgroundColor: "#f39c12",
-              color: "white",
+              color: "black",
               width: "100%",
               maxWidth: "300px",
               marginBottom: "12px"

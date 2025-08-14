@@ -63,7 +63,9 @@ const CollectionsBank = () => {
                 const countData = await countRes.json();
                 return { ...col, questionCount: countData.questionCount };
               }
-            } catch {}
+            } catch {
+              // Intentionally ignored
+            }
             return { ...col, questionCount: 0 };
           })
         );
@@ -112,7 +114,7 @@ const CollectionsBank = () => {
     });
   };
 
-  const handleDeleteClick = (id, isPublic, name, isOnline) => {
+  const handleDeleteClick = async (id, isPublic, name, isOnline) => {
     if (isPublic && isOnline) {
       setModalTitle('Cannot Delete Online Public Collection');
       setModalMessage(
@@ -122,10 +124,28 @@ const CollectionsBank = () => {
       setShowConfirmModal(true);
       return;
     }
+    // Check if any questions will be deleted from the DB (only belong to this collection)
+    let orphanWarning = '';
+    try {
+      const res = await fetch(`${API_BASE_URL}/collections/${id}/questions`);
+      if (res.ok) {
+        const data = await res.json();
+        const questions = Array.isArray(data) ? data : data.questions || [];
+        const orphanCount = questions.filter(q => {
+          const ids = Array.isArray(q.collectionIds) ? q.collectionIds : (q.collectionId ? [q.collectionId] : []);
+          return ids.length <= 1;
+        }).length;
+        if (orphanCount > 0) {
+          orphanWarning = `\n\nWarning: ${orphanCount} question${orphanCount > 1 ? 's' : ''} only belong${orphanCount > 1 ? '' : 's'} to this collection and will be deleted from the database.`;
+        }
+      }
+    } catch {
+      // Error intentionally ignored
+    }
     setDeleteTargetId(id);
     setModalTitle('Confirm Delete');
     setModalMessage(
-      `Are you sure you want to delete "${name}"? Players data will be lost but Questions will be preserved`
+      `Are you sure you want to delete "${name}"? Players data will be lost but Questions will be preserved.${orphanWarning}`
     );
     setShowConfirmModal(true);
   };
@@ -247,6 +267,24 @@ const CollectionsBank = () => {
                           backgroundColor: '#f0f0f0',
                           padding: '2px 6px',
                           borderRadius: '4px',
+                          cursor: col.isPublic ? 'not-allowed' : 'pointer',
+                          userSelect: 'all',
+                        }}
+                        title={col.isPublic ? undefined : 'Click to copy code'}
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (!col.isPublic && col.code) {
+                            try {
+                              await navigator.clipboard.writeText(col.code);
+                              setModalTitle('Copied!');
+                              setModalMessage('Collection code copied to clipboard.');
+                              setShowSuccessModal(true);
+                            } catch {
+                              setModalTitle('Error');
+                              setModalMessage('Failed to copy code.');
+                              setShowErrorModal(true);
+                            }
+                          }
                         }}
                       >
                         Code: {col.isPublic ? 'N/A' : col.code}
@@ -268,7 +306,7 @@ const CollectionsBank = () => {
                       </button>
                       <button
                         className="login-btn"
-                        style={{ backgroundColor: '#DC3545', color: '#fff', fontSize: '14px', padding: '5px 10px' }}
+                        style={{ background: '#DC3545', color: '#fff', padding: '5px 10px', fontSize: '14px' }}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDeleteClick(col._id, col.isPublic, col.name, col.isOnline);

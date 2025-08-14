@@ -197,24 +197,28 @@ const ManageAdmin = () => {
           <input type="text" placeholder="New admin username" value={newUsername} onChange={(e) => setNewUsername(e.target.value)} style={inputStyle} />
           <input type="text" placeholder="New admin email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} style={inputStyle} />
           <input type="password" placeholder="Password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} style={inputStyle} />
-          <button className="login-btn" style={btnStyle("#28a745")} onClick={addAdmin} disabled={loading}>
+          <button className="login-btn" style={btnStyle("#28a745", true)} onClick={addAdmin} disabled={loading}>
             {loading ? "Adding..." : "Add Admin"}
           </button>
-          <button className="login-btn" style={{ marginTop: "12px", ...btnStyle("#6c757d") }} onClick={() => navigate("/admin")}>← Back to Admin</button>
+          <button className="login-btn" style={{ marginTop: "12px", ...btnStyle("#6c757d", true) }} onClick={() => navigate("/admin")}>Return</button>
         </div>
 
-        <div>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
           <h3 style={{ color: "#000", textAlign: "center", marginBottom: "12px" }}>All Admins</h3>
-          <ul style={{ padding: 0, listStyleType: "none", textAlign: "center" }}>
-            {admins.map((admin) => (
-              <li key={admin._id} style={{ marginBottom: "12px" }}>
-                <strong>{admin.username}</strong>
-                <div><strong>{admin.email}</strong></div>
-                <button className="login-btn" style={btnStyle("#dc3545")} onClick={() => deleteAdmin(admin._id)}>Remove</button>
-                <button className="login-btn" style={btnStyle("#007bff")} onClick={() => transferRole(admin._id)}>Transfer Role</button>
-              </li>
-            ))}
-          </ul>
+          <div style={{ maxHeight: "180px", overflowY: "auto", border: "1px solid #ccc", borderRadius: "10px", padding: "8px", backgroundColor: "rgba(255, 255, 255, 0.8)", width: "100%", maxWidth: "400px" }}>
+            <ul style={{ padding: 0, listStyleType: "none", textAlign: "center", width: "100%", margin: 0, overflow: "unset" }}>
+              {admins.map((admin) => (
+                <li key={admin._id} style={{ marginBottom: "12px", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                  <strong>{admin.username}</strong>
+                  <div><strong>{admin.email}</strong></div>
+                  <div style={{ display: "flex", gap: "8px", marginTop: "6px" }}>
+                    <button className="login-btn" style={btnStyle("#dc3545", true)} onClick={() => deleteAdmin(admin._id)}>Remove</button>
+                    <button className="login-btn" style={btnStyle("#007bff", true)} onClick={() => transferRole(admin._id)}>Transfer Role</button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </div>
 
@@ -237,13 +241,13 @@ const inputStyle = {
   border: "1px solid #ccc",
 };
 
-const btnStyle = (bgColor) => ({
+const btnStyle = (bgColor, blackText = false) => ({
   marginLeft: "10px",
   padding: "8px 14px",
   borderRadius: "8px",
   border: "none",
   backgroundColor: bgColor,
-  color: "#fff",
+  color: blackText ? "black" : "#fff",
   cursor: "pointer",
 });
 

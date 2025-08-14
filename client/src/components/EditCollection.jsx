@@ -94,9 +94,9 @@ const EditCollection = () => {
       setShowErrorModal(true);
       return;
     }
-    if (!isPublic && code.length > 6) {
+    if (!isPublic && (code.length < 4 || code.length > 6)) {
       setModalTitle("Invalid Input");
-      setModalMessage("Collection code cannot exceed 6 characters.");
+      setModalMessage("Collection code must be 4-6 characters long.");
       setShowErrorModal(true);
       return;
     }

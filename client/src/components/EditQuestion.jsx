@@ -302,7 +302,7 @@ const EditQuestion = () => {
       <img src="/images/changihome.jpg" alt="Background" className="background-image" />
       <div className="page-overlay"></div>
       <div className="page-content scrollable-container">
-        <h2>Edit Question #{number}</h2>
+        <h2>Edit Question</h2>
 
         <form onSubmit={handleSubmit} className="centered-form">
           {/* Collections (styled like CreateQuestion) */}

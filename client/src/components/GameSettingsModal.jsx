@@ -171,10 +171,10 @@ const GameSettingsModal = ({ collection, onModalFeedback }) => {
                         backgroundColor: "#fff",
                       }}
                     >
-                      <option value="default">📋 Default (Follow Question Order)</option>
-                      <option value="random">🎲 Random (Each Game Different)</option>
-                      <option value="rotating">🔄 Rotating</option>
-                      <option value="rotating-reverse">🔄 Rotating Reverse</option>
+                      <option value="default">Default (Follow Question Order)</option>
+                      <option value="random">Random (Each Game Different)</option>
+                      <option value="rotating">Rotating</option>
+                      <option value="rotating-reverse">Rotating Reverse</option>
                     </select>
                   </div>
 
@@ -210,7 +210,7 @@ const GameSettingsModal = ({ collection, onModalFeedback }) => {
                     flex: 1,
                     padding: "12px",
                     backgroundColor: "#6f42c1",
-                    color: "#fff",
+                    color: "#000",
                     border: "none",
                     borderRadius: "5px",
                     cursor: "pointer",
@@ -226,7 +226,7 @@ const GameSettingsModal = ({ collection, onModalFeedback }) => {
                     flex: 1,
                     padding: "12px",
                     backgroundColor: "#6c757d",
-                    color: "#fff",
+                    color: "#000",
                     border: "none",
                     borderRadius: "5px",
                     cursor: "pointer",

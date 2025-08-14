@@ -9,7 +9,7 @@ const QuestionOrderModal = ({ collection, questions, setQuestions, onModalFeedba
   useEffect(() => {
     if (!collection) return;
 
-    // 🔧 Use collectionIds (array) when present; fall back to legacy collectionId
+    // Use collectionIds (array) when present; fall back to legacy collectionId
     const filtered = questions.filter((q) => {
       const ids = (q.collectionIds && Array.isArray(q.collectionIds)) ? q.collectionIds.map(String) : [];
       const legacy = q.collectionId ? [String(q.collectionId)] : [];

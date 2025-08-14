@@ -144,27 +144,49 @@ const GetCollection = () => {
   };
 
   const handleDeleteQuestionClick = (q) => {
-    setModalTitle("Confirm Delete");
-    setModalMessage(`Delete Q${q.number}?`);
+    // Use q.collectionId if present, else fallback to selectedCollection._id
+    const collectionId = q.collectionId || selectedCollection?._id;
+    if (!collectionId) {
+      setModalTitle("Error");
+      setModalMessage("Invalid collectionId: undefined");
+      setShowErrorModal(true);
+      return;
+    }
+    // Check if this is the last collection for this question
+    const allCollectionIds = Array.isArray(q.collectionIds) ? q.collectionIds : (q.collectionId ? [q.collectionId] : []);
+    const isLastCollection = allCollectionIds.length <= 1;
+    setModalTitle("Remove from Collection");
+    setModalMessage(
+      isLastCollection
+        ? `Q${q.number} only belongs to this collection. Removing it will also delete it from the database. Are you sure you want to proceed?`
+        : `Remove Q${q.number} from this collection?`
+    );
     setOnConfirmAction(() => async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/questions/${q.number}/${q.collectionId}`, {
+        const res = await fetch(`${API_BASE_URL}/questions/${q.number}/${collectionId}`, {
           method: "DELETE"
         });
         if (res.ok) {
           setQuestions((prev) => prev.filter((item) => item._id !== q._id));
-          setModalTitle("Deleted");
-          setModalMessage("Question removed.");
+          // Check if the question was deleted from the DB (no collections left)
+          const data = await res.json();
+          if (data.message && data.message.includes('deleted (no collections left)')) {
+            setModalTitle("Deleted");
+            setModalMessage("Question removed from this collection and deleted from the database (no collections left).");
+          } else {
+            setModalTitle("Removed");
+            setModalMessage("Question removed from this collection.");
+          }
           setShowSuccessModal(true);
         } else {
           const data = await res.json();
           setModalTitle("Error");
-          setModalMessage(data.message || "Failed to delete question.");
+          setModalMessage(data.message || "Failed to remove question from collection.");
           setShowErrorModal(true);
         }
       } catch {
         setModalTitle("Server Error");
-        setModalMessage("Error deleting question.");
+        setModalMessage("Error removing question from collection.");
         setShowErrorModal(true);
       }
       setShowConfirmModal(false);
@@ -260,7 +282,7 @@ const GetCollection = () => {
                         Edit
                       </button>
                       <button className="login-btn" style={{ background: "#DC3545", color: "#fff", padding: "5px 10px", fontSize: "14px" }} onClick={(e) => { e.stopPropagation(); handleDeleteQuestionClick(q); }}>
-                        Delete
+                        Remove from Collection
                       </button>
                     </div>
                   </li>

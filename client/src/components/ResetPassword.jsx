@@ -15,6 +15,32 @@ const ResetPassword = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [stage, setStage] = useState("request");
+  const [cooldown, setCooldown] = useState(0);
+  // Cooldown timer effect
+  useEffect(() => {
+    // Check sessionStorage for cooldown expiry
+    const expiry = sessionStorage.getItem('resetCooldownExpiry');
+    if (expiry) {
+      const now = Date.now();
+      const remaining = Math.ceil((parseInt(expiry, 10) - now) / 1000);
+      if (remaining > 0) setCooldown(remaining);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const interval = setInterval(() => {
+      setCooldown((prev) => {
+        if (prev <= 1) {
+          sessionStorage.removeItem('resetCooldownExpiry');
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [cooldown]);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -30,6 +56,7 @@ const ResetPassword = () => {
   }, [location.search]);
 
   const handleRequestToken = async () => {
+    if (cooldown > 0) return;
     try {
       const res = await fetch(`${baseUrl}/admins/forgot-password`, {
         method: "POST",
@@ -44,6 +71,10 @@ const ResetPassword = () => {
           message: "Reset link sent to your email.",
           type: "success",
         });
+        // Set cooldown for 60 seconds
+        const expiry = Date.now() + 60000;
+        sessionStorage.setItem('resetCooldownExpiry', expiry.toString());
+        setCooldown(60);
       } else {
         setModalProps({
           title: "Error",
@@ -154,7 +185,14 @@ const ResetPassword = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 style={inputStyle}
               />
-              <button className="login-btn" onClick={handleRequestToken}>Request Reset Link</button>
+              <button
+                className="login-btn"
+                style={{ color: 'black', opacity: cooldown > 0 ? 0.6 : 1, cursor: cooldown > 0 ? 'not-allowed' : 'pointer' }}
+                onClick={handleRequestToken}
+                disabled={cooldown > 0}
+              >
+                {cooldown > 0 ? `Request Again in ${cooldown}s` : 'Request Reset Link'}
+              </button>
             </>
           ) : (
             <>

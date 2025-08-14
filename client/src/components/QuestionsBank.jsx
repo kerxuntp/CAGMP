@@ -255,8 +255,8 @@ const QuestionsBank = () => {
                       <strong>
                         {collectionId !== "all" &&
                         collections.find((c) => c._id === collectionId)?.questionOrder?.length > 0
-                          ? `Game Q${idx + 1}: (Original Q${q.number})`
-                          : `Q${q.number}`}
+                          ? `Game Q${idx + 1}`
+                          : `Question`}
                       </strong>
 
                       {collectionId === "all" && renderAllViewBadge(q)}
@@ -277,7 +277,7 @@ const QuestionsBank = () => {
                       </button>
                       <button
                         className="login-btn"
-                        style={{ backgroundColor: "#DC3545", color: "#fff" }}
+                        style={{ background: "#DC3545", color: "#fff", padding: "5px 10px", fontSize: "14px" }}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDeleteClick(q);
@@ -293,13 +293,13 @@ const QuestionsBank = () => {
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            <button onClick={() => navigate("/add-question")} className="login-btn">
+            <button onClick={() => navigate("/add-question")} className="login-btn" style={{ color: "black" }}>
               Add New Question
             </button>
             <button
               onClick={() => navigate("/admin")}
               className="login-btn"
-              style={{ backgroundColor: "#17C4C4" }}
+              style={{ backgroundColor: "#17C4C4", color: "black" }}
             >
               Return
             </button>

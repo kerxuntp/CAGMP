@@ -171,6 +171,13 @@ const QuestionPage = () => {
         fetchedQuestions = data;
       }
 
+      // Check if collection has no questions
+      if (!Array.isArray(fetchedQuestions) || fetchedQuestions.length === 0) {
+        setError("This collection has no questions. Please contact the admin or try another code.");
+        setLoading(false);
+        return;
+      }
+
       // Apply game mode randomization per-game
       const playerIndex = parseInt(sessionStorage.getItem("playerIndex") || "0", 10);
 

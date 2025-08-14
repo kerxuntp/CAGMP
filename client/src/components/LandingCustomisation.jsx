@@ -49,7 +49,7 @@ const LandingCustomisation = () => {
       if (data.buttonGradient && typeof data.buttonGradient === 'string' && data.buttonGradient.startsWith('linear-gradient')) {
         setButtonGradient(data.buttonGradient);
         // Try to parse colors and direction from the gradient string
-        const match = data.buttonGradient.match(/linear-gradient\(([^,]+),\s*([^,]+),\s*([^\)]+)\)/);
+        const match = data.buttonGradient.match(/linear-gradient\(([^,]+),\s*([^,]+),\s*([^)]+)\)/);
         if (match) {
           setGradientDirection(match[1].trim());
           setGradientStart(match[2].trim());
@@ -265,7 +265,7 @@ const LandingCustomisation = () => {
                 style={{
                   marginTop: '8px',
                   backgroundColor: "#17C4C4",
-                  color: "#fff"
+                  color: "#000"
                 }}
               >
                 Preview
@@ -351,8 +351,7 @@ const LandingCustomisation = () => {
               onClick={handleReset}
               className="login-btn"
               style={{
-                backgroundColor: "#ff6b6b",
-                color: "white"
+                color: "black"
               }}
             >
               Reset
@@ -362,8 +361,7 @@ const LandingCustomisation = () => {
               onClick={() => navigate('/admin')}
               className="login-btn"
               style={{
-                backgroundColor: "#17C4C4",
-                color: "#fff"
+                color: "black"
               }}
             >
               Return
