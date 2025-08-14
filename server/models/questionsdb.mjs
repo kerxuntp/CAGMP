@@ -5,12 +5,15 @@ const questionSchema = new mongoose.Schema({
   number: {
     type: Number,
     required: true,
+    unique: true,              // ONE document per question number (key change)
   },
-  collectionId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Collection",
-    required: true,
-  },
+  collectionIds: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Collection",
+      required: true,
+    }
+  ],
   question: {
     type: String,
     required: true,
@@ -42,8 +45,8 @@ const questionSchema = new mongoose.Schema({
   },
 });
 
-
-questionSchema.index({ number: 1, collectionId: 1 }, { unique: true });
+// ⚠️ Remove the per-collection unique index (it caused dup docs per collection).
+// questionSchema.index({ number: 1, collectionIds: 1 }, { unique: true });
 
 const Question = mongoose.model('Question', questionSchema);
 export default Question;
