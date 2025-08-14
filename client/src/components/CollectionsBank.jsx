@@ -37,9 +37,8 @@ const CollectionsBank = () => {
     const fetchCollections = async () => {
       try {
         setIsLoading(true);
-  const res = await fetch(`${API_BASE_URL}/collections/`);
+        const res = await fetch(`${API_BASE_URL}/collections/`);
         const data = await res.json();
-        console.log('Fetched collections:', data); // Debug
         // Sort collections based on sortOption
         const sortedData = Array.isArray(data)
           ? data.sort((a, b) => {
@@ -55,7 +54,20 @@ const CollectionsBank = () => {
               return 0;
             })
           : [];
-        setCollections(sortedData);
+        // Fetch question count for each collection in parallel
+        const withCounts = await Promise.all(
+          sortedData.map(async (col) => {
+            try {
+              const countRes = await fetch(`${API_BASE_URL}/collections/${col._id}/question-count`);
+              if (countRes.ok) {
+                const countData = await countRes.json();
+                return { ...col, questionCount: countData.questionCount };
+              }
+            } catch {}
+            return { ...col, questionCount: 0 };
+          })
+        );
+        setCollections(withCounts);
       } catch (err) {
         console.error('Error fetching collections:', err);
         setCollections([]);
@@ -241,7 +253,7 @@ const CollectionsBank = () => {
                       </span>
                     </div>
                     <div style={{ marginBottom: '8px' }}>
-                      {col.questionCount || col.questionOrder?.length || 0} Questions
+                      {typeof col.questionCount === 'number' ? col.questionCount : 0} Questions
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <button

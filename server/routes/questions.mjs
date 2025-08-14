@@ -80,12 +80,13 @@ router.get('/:number', async (req, res) => {
 /**
  * POST create question  — Upsert by number & merge collectionIds (ONE doc per question)
  */
+// POST create question — auto-increment number if not provided, shared among collections
 router.post('/', upload.single('image'), async (req, res) => {
   try {
-    const { number, question, hint, answer, funFact, type, options } = req.body;
+    let { number, question, hint, answer, funFact, type, options } = req.body;
     let collectionIds = req.body.collectionIds;
 
-    if (!number || !question || !hint || !funFact || !type) {
+    if (!question || !hint || !funFact || !type) {
       return res.status(400).json({ message: 'Missing required fields.' });
     }
 
@@ -126,7 +127,18 @@ router.post('/', upload.single('image'), async (req, res) => {
 
     const imgPath = req.file ? req.file.path : undefined;
 
-    // 🔑 Upsert by number (ONE doc per question)
+    // If number is not provided, auto-assign the lowest available number not taken in any selected collection
+    if (!number || isNaN(Number(number))) {
+      // Find all numbers used in any of the selected collections
+      const usedNumbers = new Set();
+      const questions = await Question.find({ collectionIds: { $in: validCollectionIds } }).select('number');
+      questions.forEach(q => usedNumbers.add(q.number));
+      let nextNumber = 1;
+      while (usedNumbers.has(nextNumber)) nextNumber++;
+      number = nextNumber;
+    }
+
+    // Upsert by number (ONE doc per question)
     let doc = await Question.findOne({ number: parseInt(number) });
 
     if (doc) {

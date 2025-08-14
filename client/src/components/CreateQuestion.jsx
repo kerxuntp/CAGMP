@@ -9,7 +9,7 @@ import "../styles/global/MainStyles.css";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://shared-api-url.com';
 
 const CreateQuestion = () => {
-  const [number, setNumber] = useState("");
+  // Remove number state
   const [selectedCollectionIds, setSelectedCollectionIds] = useState([]);
   const [question, setQuestion] = useState("");
   const [hint, setHint] = useState("");
@@ -79,9 +79,7 @@ const CreateQuestion = () => {
 
     try {
       // Basic validation
-      if (!number || isNaN(Number(number))) {
-        return showError("Invalid Input", "Please enter a valid question number.");
-      }
+  // No manual number field, backend will auto-assign
       if (!question.trim()) {
         return showError("Invalid Input", "Please enter a question.");
       }
@@ -118,21 +116,11 @@ const CreateQuestion = () => {
         }
       }
 
-      // Optional: check whether a doc with this number already exists (informational only)
-      let existingByNumber = null;
-      try {
-        const existsRes = await fetch(`${API_BASE_URL}/questions/${number}`);
-        if (existsRes.ok) {
-          const existsJson = await existsRes.json();
-          existingByNumber = existsJson?.data || null;
-        }
-      } catch {
-        // ignore precheck errors
-      }
+  // No precheck for number needed
 
       // Build payload
       const formData = new FormData();
-      formData.append("number", String(number).trim());
+  // Do not send number, backend will assign
       formData.append(
         "collectionIds",
         JSON.stringify(selectedCollectionIds.map((id) => id.trim()))
@@ -161,17 +149,13 @@ const CreateQuestion = () => {
         return showError("Error", data.message || "Could not add question.");
       }
 
-      setAlertTitle("Success");
-      setAlertMessage(
-        existingByNumber
-          ? "Question saved and merged into the existing number (collections updated)."
-          : "Question added successfully!"
-      );
-      setAlertType("success");
-      setShowAlert(true);
+  setAlertTitle("Success");
+  setAlertMessage("Question added successfully!");
+  setAlertType("success");
+  setShowAlert(true);
 
       // Reset form
-      setNumber("");
+  // No number to reset
       setSelectedCollectionIds([]);
       setQuestion("");
       setHint("");
@@ -204,14 +188,7 @@ const CreateQuestion = () => {
             <option value="mcq">Multiple Choice Question</option>
           </select>
 
-          <input
-            type="number"
-            value={number}
-            onChange={(e) => setNumber(e.target.value)}
-            placeholder="Question Number"
-            required
-            className="login-btn"
-          />
+          {/* Number field removed, backend will auto-assign */}
 
           <div className="collection-box">
             <p className="collection-title">Select Collections:</p>

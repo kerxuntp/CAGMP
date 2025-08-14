@@ -39,6 +39,26 @@ router.get('/with-questions', async (req, res) => {
   }
 });
 
+// Get the number of questions in a collection (only those in questionOrder and with collectionIds including this collection)
+router.get('/:id/question-count', async (req, res) => {
+  try {
+    const collection = await Collection.findById(req.params.id).lean();
+    if (!collection) {
+      return res.status(404).json({ message: 'Collection not found' });
+    }
+    let count = 0;
+    if (collection.questionOrder?.length) {
+      count = await Question.countDocuments({
+        _id: { $in: collection.questionOrder },
+        collectionIds: collection._id
+      });
+    }
+    res.status(200).json({ questionCount: count });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to fetch question count', error: error.message });
+  }
+});
+
 // Get public collection
 router.get('/public', async (req, res) => {
   try {
