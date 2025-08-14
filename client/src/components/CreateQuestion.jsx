@@ -1,9 +1,12 @@
-// unchanged import statements
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AlertModal from "./AlertModal";
+import Loading from "./Loading";
 import "../styles/global/MainStyles.css";
 
+
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://shared-api-url.com';
 
 const CreateQuestion = () => {
   const [number, setNumber] = useState("");
@@ -17,12 +20,12 @@ const CreateQuestion = () => {
   const [correctIndex, setCorrectIndex] = useState(null);
   const [collections, setCollections] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [image, setImage] = useState(null);
   const [showAlert, setShowAlert] = useState(false);
   const [alertTitle, setAlertTitle] = useState("");
   const [alertMessage, setAlertMessage] = useState("");
   const [alertType, setAlertType] = useState("info");
+  const [loading, setLoading] = useState(true);
 
   const navigate = useNavigate();
 
@@ -33,18 +36,23 @@ const CreateQuestion = () => {
       setAlertMessage("You must be logged in to access this page.");
       setAlertType("error");
       setShowAlert(true);
+      setLoading(false);
       return;
     }
     const fetchCollections = async () => {
+      setLoading(true);
       try {
-        const res = await fetch("http://localhost:5000/collections/");
+        const res = await fetch(`${API_BASE_URL}/collections/`);
+        if (!res.ok) throw new Error("Failed to fetch collections");
         const data = await res.json();
-        setCollections(data);
+        setCollections(Array.isArray(data) ? data : []);
       } catch {
         setAlertTitle("Error");
         setAlertMessage("Failed to fetch collections.");
         setAlertType("error");
         setShowAlert(true);
+      } finally {
+        setLoading(false);
       }
     };
     fetchCollections();
@@ -113,7 +121,7 @@ const CreateQuestion = () => {
       // Optional: check whether a doc with this number already exists (informational only)
       let existingByNumber = null;
       try {
-        const existsRes = await fetch(`http://localhost:5000/questions/${number}`);
+        const existsRes = await fetch(`${API_BASE_URL}/questions/${number}`);
         if (existsRes.ok) {
           const existsJson = await existsRes.json();
           existingByNumber = existsJson?.data || null;
@@ -143,7 +151,7 @@ const CreateQuestion = () => {
       if (image) formData.append("image", image);
 
       // Create / merge one doc per question number
-      const res = await fetch("http://localhost:5000/questions", {
+      const res = await fetch(`${API_BASE_URL}/questions`, {
         method: "POST",
         body: formData,
       });
@@ -172,14 +180,17 @@ const CreateQuestion = () => {
       setType("open");
       setOptions(["", ""]);
       setCorrectIndex(null);
-      setIsModalOpen(false);
       setImage(null);
-    } catch (err) {
+    } catch {
       showError("Error", "Failed to add question.");
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  if (loading) {
+    return <Loading />;
+  }
 
   return (
     <div className="login-container">
@@ -204,29 +215,32 @@ const CreateQuestion = () => {
 
           <div className="collection-box">
             <p className="collection-title">Select Collections:</p>
-            {collections.map((col) => (
-              <label
-                key={col._id}
-                className="collection-item"
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '6px 10px',
-                  background: '#222',
-                  color: '#fff',
-                  margin: '5px 0',
-                  borderRadius: '6px'
-                }}
-              >
-                <span>{col.name}</span>
-                <input
-                  type="checkbox"
-                  checked={selectedCollectionIds.includes(col._id)}
-                  onChange={() => toggleCollection(col._id)}
-                />
-              </label>
-            ))}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {collections.map((col) => (
+                <div
+                  key={col._id}
+                  className="collection-item"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    background: '#222',
+                    color: '#fff',
+                    margin: '0',
+                    borderRadius: '6px',
+                    padding: '6px 10px',
+                    gap: '12px',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedCollectionIds.includes(col._id)}
+                    onChange={() => toggleCollection(col._id)}
+                    style={{ marginRight: '10px', accentColor: '#17C4C4', width: '18px', height: '18px' }}
+                  />
+                  <span style={{ flex: 1 }}>{col.name}</span>
+                </div>
+              ))}
+            </div>
           </div>
 
           <textarea

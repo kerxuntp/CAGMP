@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/global/MainStyles.css";
@@ -41,7 +40,7 @@ const BadUsernames = () => {
       const response = await fetch(`${API_BASE_URL}/bad-usernames`);
       const data = await response.json();
       setBadUsernames(data);
-    } catch (error) {
+    } catch {
       setModalTitle("Error");
       setModalMessage("Error fetching bad usernames.");
       setShowErrorModal(true);
@@ -128,7 +127,7 @@ const BadUsernames = () => {
         setModalMessage(data.message || "Failed to update usernames.");
         setShowErrorModal(true);
       }
-    } catch (error) {
+    } catch {
       setModalTitle("Server Error");
       setModalMessage("Error updating usernames.");
       setShowErrorModal(true);
@@ -160,7 +159,7 @@ const BadUsernames = () => {
         setModalMessage(data.message || "Failed to remove username.");
         setShowErrorModal(true);
       }
-    } catch (error) {
+    } catch {
       setModalTitle("Server Error");
       setModalMessage("Error removing username.");
       setShowErrorModal(true);

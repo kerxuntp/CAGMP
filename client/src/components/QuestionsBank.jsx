@@ -1,5 +1,6 @@
 // QuestionsBank.jsx
 import React, { useEffect, useState } from "react";
+import Loading from "./Loading";
 import { useNavigate, useLocation } from "react-router-dom";
 import AlertModal from "./AlertModal";
 import "../styles/pages/Questions.css";
@@ -10,6 +11,7 @@ const QuestionsBank = () => {
   const [questions, setQuestions] = useState([]);
   const [collections, setCollections] = useState([]);
   const [collectionId, setCollectionId] = useState("");
+  const [loading, setLoading] = useState(true);
 
   const [showError, setShowError] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
@@ -31,6 +33,7 @@ const QuestionsBank = () => {
   }, []);
 
   useEffect(() => {
+    setLoading(true);
     (async () => {
       try {
         const res = await fetch(`${baseUrl}/collections/`);
@@ -41,12 +44,15 @@ const QuestionsBank = () => {
         }
       } catch (err) {
         console.error(err);
+      } finally {
+        setLoading(false);
       }
     })();
-  }, [passedId, collectionId]);
+  }, [passedId, collectionId, baseUrl]);
 
   useEffect(() => {
     if (!collectionId) return;
+    setLoading(true);
     const url =
       collectionId === "all"
         ? `${baseUrl}/questions`
@@ -59,9 +65,11 @@ const QuestionsBank = () => {
       } catch (err) {
         console.error(err);
         setQuestions([]);
+      } finally {
+        setLoading(false);
       }
     })();
-  }, [collectionId]);
+  }, [collectionId, baseUrl]);
 
   const getCollectionName = (id) => {
     const col = collections.find((c) => c._id === id);
@@ -171,6 +179,22 @@ const QuestionsBank = () => {
       </span>
     );
   };
+
+
+    if (loading) {
+      return (
+        <div className="login-container">
+          <img src="/images/changihome.jpg" alt="BG" className="background-image" />
+          <div className="page-overlay" />
+          <div className="top-left-logo">
+            <img src="/images/ces.jpg" alt="Logo" />
+          </div>
+          <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Loading />
+          </div>
+        </div>
+      );
+    }
 
   return (
     <div className="login-container">

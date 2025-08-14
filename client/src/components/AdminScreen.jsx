@@ -173,12 +173,4 @@ const AdminScreen = () => {
   );
 };
 
-const btnStyle = (bgColor) => ({
-  marginTop: "12px",
-  width: "100%",
-  maxWidth: "300px",
-  backgroundColor: bgColor,
-  color: "#000",
-});
-
 export default AdminScreen;
