@@ -11,6 +11,7 @@ import photoUpload from './routes/photoUpload.mjs';
 import autoClearRoutes from './routes/autoClear.mjs'; 
 import AutoClearConfig from './models/autoCleardb.mjs'; 
 import Player from './models/playerdb.mjs'; 
+import Collection from './models/collectiondb.mjs';
 import BadUsername from './routes/badUsername.mjs';
 import globalSettingsRoutes from "./routes/globalSettings.mjs";
 import landingCustomisationRoutes from './routes/landingCustomisation.mjs';
@@ -61,6 +62,7 @@ app.listen(PORT, '0.0.0.0', () => {
 });
 
 
+
 setInterval(async () => {
   try {
     const configs = await AutoClearConfig.find();
@@ -70,33 +72,37 @@ setInterval(async () => {
     const nowTime = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
 
     for (const config of configs) {
-        const last = config.lastClearedAt || new Date(0);
-        let due = false;
+      // Skip if collection does not exist
+      const collectionExists = await Collection.exists({ _id: config.collectionId });
+      if (!collectionExists) continue;
 
-        // For custom interval, ignore clearTime and run based on elapsed time
-        if (config.interval === "custom") {
-          if (config.customIntervalValue && config.customIntervalUnit) {
-            const msMap = {
-              minute: 60 * 1000,
-              hour: 60 * 60 * 1000,
-              day: 24 * 60 * 60 * 1000,
-            };
-            const intervalMs = config.customIntervalValue * msMap[config.customIntervalUnit];
-            due = now - last >= intervalMs;
-          }
-        } else {
-          // For non-custom intervals, only run if current time matches clearTime
-          if (config.clearTime && nowTime !== config.clearTime) continue;
-          if (config.interval === "day") {
-            due = now - last >= 24 * 60 * 60 * 1000; // 1 day
-          } else if (config.interval === "week") {
-            due = now - last >= 7 * 24 * 60 * 60 * 1000;
-          } else if (config.interval === "month") {
-            due = now - last >= 30 * 24 * 60 * 60 * 1000;
-          }
+      const last = config.lastClearedAt || new Date(0);
+      let due = false;
+
+      // For custom interval, ignore clearTime and run based on elapsed time
+      if (config.interval === "custom") {
+        if (config.customIntervalValue && config.customIntervalUnit) {
+          const msMap = {
+            minute: 60 * 1000,
+            hour: 60 * 60 * 1000,
+            day: 24 * 60 * 60 * 1000,
+          };
+          const intervalMs = config.customIntervalValue * msMap[config.customIntervalUnit];
+          due = now - last >= intervalMs;
         }
+      } else {
+        // For non-custom intervals, only run if current time matches clearTime
+        if (config.clearTime && nowTime !== config.clearTime) continue;
+        if (config.interval === "day") {
+          due = now - last >= 24 * 60 * 60 * 1000; // 1 day
+        } else if (config.interval === "week") {
+          due = now - last >= 7 * 24 * 60 * 60 * 1000;
+        } else if (config.interval === "month") {
+          due = now - last >= 30 * 24 * 60 * 60 * 1000;
+        }
+      }
 
-        if (!due) continue;
+      if (!due) continue;
 
       let filter = { collectionId: config.collectionId };
       if (config.target === "today") {
@@ -172,4 +178,4 @@ setInterval(async () => {
   } catch (err) {
     console.error("[AUTO CLEAR ERROR]", err);
   }
-}, 10 * 1000); // Every 10 seconds
+}, 10 * 1000); // Checks every 10 seconds
