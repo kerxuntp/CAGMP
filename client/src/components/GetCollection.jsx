@@ -162,13 +162,15 @@ const GetCollection = () => {
     // Check if this is the last collection for this question
     const allCollectionIds = Array.isArray(q.collectionIds) ? q.collectionIds : (q.collectionId ? [q.collectionId] : []);
     const isLastCollection = allCollectionIds.length <= 1;
-    // Determine game question number if questionOrder is present
-    let gameQNum = null;
+    // Determine question label: always use index+1 for display
+    let qLabel = "";
     if (selectedCollection && Array.isArray(selectedCollection.questionOrder) && selectedCollection.questionOrder.length > 0) {
       const idx = questions.findIndex(qq => qq._id === q._id);
-      if (idx !== -1) gameQNum = idx + 1;
+      qLabel = idx !== -1 ? `Game Q${idx + 1}` : "Question";
+    } else {
+      const idx = questions.findIndex(qq => qq._id === q._id);
+      qLabel = idx !== -1 ? `Question ${idx + 1}` : "Question";
     }
-    const qLabel = gameQNum ? `Game Q${gameQNum}` : `Q${q.number}`;
     setModalTitle("Remove from Collection");
     setModalMessage(
       isLastCollection
@@ -292,7 +294,7 @@ const GetCollection = () => {
                     <li key={q._id} onClick={() => navigate(`/edit-question/${q.number}/${q.collectionId}`)} style={{ background: "#fff", borderRadius: "8px", padding: "10px", marginBottom: "8px", cursor: "pointer" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
                         <strong>
-                          {selectedCollection.questionOrder?.length > 0 ? `Game Q${i + 1}:` : `Q${q.number}`}
+                          {`Game Q${i + 1}`}
                         </strong>
                       </div>
                       <p style={{ marginBottom: "8px" }}>{q.question}</p>
