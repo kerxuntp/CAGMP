@@ -308,15 +308,7 @@ export function AutoClearLogModal({ isOpen, collections, logs, logCollection, on
     year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
   });
 
-  // Helper to shorten interval units
-  const shortUnit = (unit) => {
-    switch (unit) {
-      case "minute": return "m";
-      case "hour": return "h";
-      case "day": return "d";
-      default: return unit;
-    }
-  };
+  // ...existing code...
 
   // Helper to shorten date format
   const shortDate = (dateStr) => {
@@ -367,7 +359,7 @@ export function AutoClearLogModal({ isOpen, collections, logs, logCollection, on
                       <td style={{ border: "1px solid #ddd", padding: "6px" }}>{collections[log.collectionId] || "Unknown"}</td>
                       <td style={{ border: "1px solid #ddd", padding: "6px" }}>
                         {log.interval === "custom"
-                          ? `custom (${log.customIntervalValue ? log.customIntervalValue : "?"}${log.customIntervalUnit ? shortUnit(log.customIntervalUnit) : ""})`
+                          ? "custom"
                           : log.interval}
                       </td>
                       <td style={{ border: "1px solid #ddd", padding: "6px" }}>
