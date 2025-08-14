@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import QuestionOrderModal from "./QuestionOrderModal";
 import GameSettingsModal from "./GameSettingsModal";
 import AlertModal from "./AlertModal";
+import Loading from "./Loading";
 import "../styles/pages/Questions.css";
 import "../styles/global/MainStyles.css";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
@@ -10,6 +11,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000
 const GetCollection = () => {
   const [selectedCollection, setSelectedCollection] = useState(null);
   const [questions, setQuestions] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
@@ -33,6 +35,7 @@ const GetCollection = () => {
 
   useEffect(() => {
     const fetchCollection = async () => {
+      setLoading(true);
       try {
         const res = await fetch(`${API_BASE_URL}/collections/${id}`);
         const data = await res.json();
@@ -44,12 +47,14 @@ const GetCollection = () => {
       } catch {
         navigate(fromPage === "collections" ? "/collections-bank" : "/questions?collection=all");
       }
+      setLoading(false);
     };
     if (id) fetchCollection();
   }, [fromPage, id, navigate]);
 
   useEffect(() => {
     if (!id || !selectedCollection) return;
+    setLoading(true);
     (async () => {
       try {
         const res = await fetch(`${API_BASE_URL}/collections/${id}/questions`);
@@ -58,6 +63,7 @@ const GetCollection = () => {
           setModalTitle("Error");
           setModalMessage(data.message || "Failed to fetch questions.");
           setShowErrorModal(true);
+          setLoading(false);
           return;
         }
         const data = await res.json();
@@ -68,6 +74,7 @@ const GetCollection = () => {
         setShowErrorModal(true);
         setQuestions([]);
       }
+      setLoading(false);
     })();
   }, [id, selectedCollection]);
 
@@ -207,7 +214,11 @@ const GetCollection = () => {
             Managing Collection: "{selectedCollection?.name || id}" {selectedCollection?.isPublic ? "(Public)" : ""} {selectedCollection?.isOnline ? "(Online)" : "(Offline)"}
           </p>
 
-          {selectedCollection && (
+          {loading && (
+            <div style={{ margin: '40px 0' }}><Loading /></div>
+          )}
+
+          {!loading && selectedCollection && (
             <div style={{ backgroundColor: "rgba(255,255,255,0.9)", padding: "10px", borderRadius: "8px", marginBottom: "10px", display: "flex", gap: "8px", alignItems: "center" }}>
               <button
                 onClick={handleEditCollection}
@@ -264,32 +275,34 @@ const GetCollection = () => {
             </div>
           )}
 
-          <div style={{ maxHeight: "80vh", overflowY: "auto", width: "100%", marginBottom: "16px" }}>
-            {questions.length === 0 ? (
-              <p>No questions found in this collection.</p>
-            ) : (
-              <ul style={{ listStyle: "none", padding: 0 }}>
-                {questions.map((q, i) => (
-                  <li key={q._id} onClick={() => navigate(`/edit-question/${q.number}/${q.collectionId}`)} style={{ background: "#fff", borderRadius: "8px", padding: "10px", marginBottom: "8px", cursor: "pointer" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
-                      <strong>
-                        {selectedCollection.questionOrder?.length > 0 ? `Game Q${i + 1}: (Original Q${q.number})` : `Q${q.number}`}
-                      </strong>
-                    </div>
-                    <p style={{ marginBottom: "8px" }}>{q.question}</p>
-                    <div style={{ display: "flex", gap: "8px" }}>
-                      <button className="login-btn" style={{ backgroundColor: "#FFC107", color: "#000", padding: "5px 10px", fontSize: "14px" }} onClick={(e) => { e.stopPropagation(); navigate(`/edit-question/${q.number}/${q.collectionId}`); }}>
-                        Edit
-                      </button>
-                      <button className="login-btn" style={{ background: "#DC3545", color: "#fff", padding: "5px 10px", fontSize: "14px" }} onClick={(e) => { e.stopPropagation(); handleDeleteQuestionClick(q); }}>
-                        Remove from Collection
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+          {!loading && (
+            <div style={{ maxHeight: "80vh", overflowY: "auto", width: "100%", marginBottom: "16px" }}>
+              {questions.length === 0 ? (
+                <p>No questions found in this collection.</p>
+              ) : (
+                <ul style={{ listStyle: "none", padding: 0 }}>
+                  {questions.map((q, i) => (
+                    <li key={q._id} onClick={() => navigate(`/edit-question/${q.number}/${q.collectionId}`)} style={{ background: "#fff", borderRadius: "8px", padding: "10px", marginBottom: "8px", cursor: "pointer" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
+                        <strong>
+                          {selectedCollection.questionOrder?.length > 0 ? `Game Q${i + 1}:` : `Q${q.number}`}
+                        </strong>
+                      </div>
+                      <p style={{ marginBottom: "8px" }}>{q.question}</p>
+                      <div style={{ display: "flex", gap: "8px" }}>
+                        <button className="login-btn" style={{ backgroundColor: "#FFC107", color: "#000", padding: "5px 10px", fontSize: "14px" }} onClick={(e) => { e.stopPropagation(); navigate(`/edit-question/${q.number}/${q.collectionId}`); }}>
+                          Edit
+                        </button>
+                        <button className="login-btn" style={{ background: "#DC3545", color: "#fff", padding: "5px 10px", fontSize: "14px" }} onClick={(e) => { e.stopPropagation(); handleDeleteQuestionClick(q); }}>
+                          Remove from Collection
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
 
           <div style={{ display: "flex", gap: "20px", marginBottom: "20px" }}>
             <button

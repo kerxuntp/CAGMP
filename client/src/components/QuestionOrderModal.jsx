@@ -150,7 +150,6 @@ const QuestionOrderModal = ({ collection, questions, setQuestions, onModalFeedba
                       Game Q{idx + 1}
                     </div>
                     <div style={{ flex: 1 }}>
-                      <strong>Original Q{q.number}</strong>
                       <p style={{ margin: 0, fontSize: "14px", color: "#666" }}>
                         {q.question.slice(0, 80)}...
                       </p>

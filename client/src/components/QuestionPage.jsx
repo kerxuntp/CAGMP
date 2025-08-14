@@ -25,6 +25,7 @@ const QuestionPage = () => {
   const [timerPaused, setTimerPaused] = useState(false);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [quizComplete, setQuizComplete] = useState(false);
 
   // Modal states
   const [showHintModal, setShowHintModal] = useState(false);
@@ -353,6 +354,7 @@ const QuestionPage = () => {
   };
 
   const handleFinish = async (answeredLast) => {
+    setQuizComplete(true);
     const finalCorrect = correctAnswers + (answeredLast ? 1 : 0);
     const rawTime = Math.floor((Date.now() - startTime.current) / 1000);
     const finalTime = Math.max(0, rawTime + timePenalty.current);
@@ -557,9 +559,9 @@ const QuestionPage = () => {
             {questions[currentIndex].options?.map((option, idx) => (
               <button
                 key={idx}
-                onClick={() => setUserAnswer(option)}
-                className={`game-mcq-option-button ${userAnswer === option ? "selected" : ""
-                  }`}
+                onClick={() => !quizComplete && setUserAnswer(option)}
+                className={`game-mcq-option-button ${userAnswer === option ? "selected" : ""}`}
+                disabled={quizComplete}
               >
                 {option}
               </button>
@@ -570,10 +572,11 @@ const QuestionPage = () => {
             type="text"
             placeholder="Type your answer here"
             value={userAnswer}
-            onChange={(e) => setUserAnswer(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+            onChange={(e) => !quizComplete && setUserAnswer(e.target.value)}
+            onKeyDown={(e) => !quizComplete && e.key === "Enter" && handleSubmit()}
             className="game-answer-input"
             autoFocus
+            disabled={quizComplete}
           />
         )}
       </div>
@@ -583,12 +586,14 @@ const QuestionPage = () => {
         <button
           onClick={handleHintClick}
           className="game-hint-button"
+          disabled={quizComplete}
         >
           Hint (+{formatPenaltyShort(gameSettings.hintPenalty)})
         </button>
         <button
           onClick={handleSkip}
           className="game-skip-button"
+          disabled={quizComplete}
         >
           Skip (+{formatPenaltyShort(gameSettings.skipPenalty)})
         </button>
@@ -599,6 +604,7 @@ const QuestionPage = () => {
         <button
           onClick={handleSubmit}
           className="game-submit-button"
+          disabled={quizComplete}
         >
           Submit Answer
         </button>
