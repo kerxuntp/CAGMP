@@ -14,6 +14,7 @@ const collectionSchema = new mongoose.Schema({
     ref: "Question",
     default: []
   },
+
   // Game settings system
   useGlobalSettings: { 
     type: Boolean, 
@@ -37,6 +38,11 @@ const collectionSchema = new mongoose.Schema({
     type: Boolean, 
     default: true 
   },
+    // Show redeem gift section on results page if true
+    gotRewards: {
+      type: Boolean,
+      default: true
+    },
   welcomeMessage: {
     type: String,
     default: "",

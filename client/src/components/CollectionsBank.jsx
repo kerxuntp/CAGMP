@@ -145,7 +145,7 @@ const CollectionsBank = () => {
     setDeleteTargetId(id);
     setModalTitle('Confirm Delete');
     setModalMessage(
-      `Are you sure you want to delete "${name}"? Players data will be lost but Questions will be preserved.${orphanWarning}`
+      `Are you sure you want to delete "${name}"?\n\nThis will also delete all players, auto clear configs, and logs associated with this collection. Questions will be preserved.${orphanWarning}`
     );
     setShowConfirmModal(true);
   };

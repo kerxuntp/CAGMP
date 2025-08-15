@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import AlertModal from "./AlertModal";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 import "../styles/global/MainStyles.css";
@@ -7,11 +7,15 @@ import "../styles/global/MainStyles.css";
 const EditCollection = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
-  const [welcomeMessage, setWelcomeMessage] = useState(""); // <-- NEW
-  const [isPublic, setIsPublic] = useState(false);
-  const [isOnline, setIsOnline] = useState(true);
+  const [welcomeMessage, setWelcomeMessage] = useState("");
+  const [isPublic, setIsPublic] = useState(undefined);
+  const [isOnline, setIsOnline] = useState(undefined);
+  const [gotRewards, setGotRewards] = useState(undefined);
+  const [isLoading, setIsLoading] = useState(true);
+  const [pendingCheckboxValue, setPendingCheckboxValue] = useState(null);
   const [prevIsPublic, setPrevIsPublic] = useState(false);
   const [prevIsOnline, setPrevIsOnline] = useState(true);
   const [existingPublicCollection, setExistingPublicCollection] = useState(null);
@@ -50,14 +54,17 @@ const EditCollection = () => {
         const res = await fetch(`${API_BASE_URL}/collections/${id}`);
         const data = await res.json();
         setName(data.name);
-        setCode(data.code);
+        setCode(typeof data.code === "string" ? data.code : "");
         setIsPublic(data.isPublic);
         setIsOnline(data.isOnline);
         setPrevIsPublic(data.isPublic);
         setPrevIsOnline(data.isOnline);
         setWelcomeMessage(data.welcomeMessage || "");
+        setGotRewards(data.gotRewards === true);
       } catch {
         console.error("Failed to load collection");
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -112,7 +119,7 @@ const EditCollection = () => {
       setShowErrorModal(true);
       return;
     }
-    if (!isPublic && !code.trim()) {
+    if (!isPublic && !(typeof code === "string" && code.trim())) {
       setModalTitle("Invalid Input");
       setModalMessage("Please enter a collection code.");
       setShowErrorModal(true);
@@ -140,6 +147,7 @@ const EditCollection = () => {
           isPublic,
           isOnline,
           welcomeMessage,
+          gotRewards,
         }),
       });
       if (res.ok) {
@@ -148,8 +156,15 @@ const EditCollection = () => {
         setShowSuccessModal(true);
       } else {
         const data = await res.json();
-        setModalTitle("Error");
-        setModalMessage(data.message || "Failed to update collection.");
+        const msg = (data.message || "").toLowerCase();
+        const err = (data.error || "").toLowerCase();
+        if (msg.includes("duplicate") || err.includes("duplicate")) {
+          setModalTitle("Duplicate Code");
+          setModalMessage("This collection code is already in use. Please choose a different code.");
+        } else {
+          setModalTitle("Error");
+          setModalMessage(data.message || "Failed to update collection.");
+        }
         setShowErrorModal(true);
       }
     } catch {
@@ -161,7 +176,8 @@ const EditCollection = () => {
 
   const handleSuccessConfirm = () => {
     handleModalClose();
-    navigate(`/get-collections/${id}`);
+    // Preserve the 'from' state if it exists, default to 'collections'
+    navigate(`/get-collections/${id}`, { state: { from: location.state?.from || "collections" } });
   };
 
   const handlePublicConfirm = () => {
@@ -174,39 +190,78 @@ const EditCollection = () => {
     }
   };
 
-  const handleCheckboxChange = (type, newValue) => {
-    if (type === "public") {
-      setPrevIsPublic(isPublic);
-      setIsPublic(newValue);
-      if (newValue) {
-        setCode("");
+  const [questions, setQuestions] = useState([]);
+
+  // Fetch questions for this collection (for online check)
+  useEffect(() => {
+    const fetchQuestions = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/collections/${id}/questions`);
+        const data = await res.json();
+        setQuestions(Array.isArray(data) ? data : data.questions || []);
+      } catch {
+        setQuestions([]);
       }
-    } else {
-      setPrevIsOnline(isOnline);
-      setIsOnline(newValue);
+    };
+    fetchQuestions();
+  }, [id]);
+
+  const handleCheckboxChange = (type, newValue) => {
+    // Prevent setting online if no questions
+    if (type === "online" && newValue && (!questions || questions.length === 0)) {
+      setModalTitle("Cannot Set Online");
+      setModalMessage("You must add at least one question to set the collection online.");
+      setShowErrorModal(true);
+      return;
     }
     setCheckboxType(type);
-    setModalTitle(type === "public" ? "Change Public Status?" : "Change Online Status?");
-    setModalMessage(
-      type === "public"
-        ? newValue
-          ? "This will make the collection public and available to all users. Only one public collection can be online at a time. Collection code will be cleared and disabled."
-          : "This will remove this collection from public access."
-        : newValue
+    let title = "";
+    let message = "";
+    if (type === "public") {
+      title = "Change Public Status?";
+      message = newValue
+        ? "This will make the collection public and available to all users. Only one public collection can be online at a time. Collection code will be cleared and disabled."
+        : "This will remove this collection from public access.";
+    } else if (type === "online") {
+      title = "Change Online Status?";
+      message = newValue
         ? "This will make the collection available for gameplay."
-        : "This will disable the collection from being accessed by players."
-    );
+        : "This will disable the collection from being accessed by players.";
+    } else if (type === "rewards") {
+      title = "Change Rewards Setting?";
+      message = newValue
+        ? "Enabling rewards will allow players to redeem a gift after completing the collection."
+        : "Disabling rewards will hide the redeem gift section from players on the results page.";
+    }
+    setModalTitle(title);
+    setModalMessage(message);
+    setPendingCheckboxValue({ type, value: newValue });
     setShowCheckboxInfoModal(true);
   };
 
   const handleCheckboxConfirm = () => {
+    if (pendingCheckboxValue) {
+      if (pendingCheckboxValue.type === "public") {
+        setPrevIsPublic(isPublic);
+        setIsPublic(pendingCheckboxValue.value);
+        if (pendingCheckboxValue.value) setCode("");
+      }
+      if (pendingCheckboxValue.type === "online") {
+        setPrevIsOnline(isOnline);
+        setIsOnline(pendingCheckboxValue.value);
+      }
+      if (pendingCheckboxValue.type === "rewards") {
+        setGotRewards(pendingCheckboxValue.value);
+      }
+    }
+    setPendingCheckboxValue(null);
     setCheckboxType(null);
     handleModalClose();
   };
 
   const handleCheckboxCancel = () => {
-    if (checkboxType === "public") setIsPublic(prevIsPublic);
-    if (checkboxType === "online") setIsOnline(prevIsOnline);
+    setPendingCheckboxValue(null);
+    setCheckboxType(null);
     handleModalClose();
   };
 
@@ -248,6 +303,19 @@ const EditCollection = () => {
     }
   };
 
+  if (isLoading || isPublic === undefined || isOnline === undefined || gotRewards === undefined) {
+    return (
+      <div className="login-container">
+        <img src="/images/changihome.jpg" alt="Background" className="background-image" />
+        <div className="page-overlay" />
+        <div className="buttons">
+          <h2 style={{ color: "#000", fontSize: "24px", marginBottom: "10px" }}>Edit Collection</h2>
+          <div style={{ color: '#888', textAlign: 'center', marginTop: '40px' }}>Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="login-container">
       <img src="/images/changihome.jpg" alt="Background" className="background-image" />
@@ -268,7 +336,7 @@ const EditCollection = () => {
             <input
               type="text"
               placeholder="Collection Code"
-              value={code}
+              value={typeof code === "string" ? code : ""}
               onChange={(e) => setCode(e.target.value)}
               disabled={isPublic}
               className="login-btn"
@@ -291,12 +359,12 @@ const EditCollection = () => {
             <button
               type="button"
               onClick={handleCopyCode}
-              disabled={isPublic || !code.trim()}
+              disabled={isPublic || !(typeof code === "string" && code.trim())}
               className="login-btn"
               style={{
                 width: "70px",
-                backgroundColor: isPublic || !code.trim() ? "#e9ecef" : "#17C4C4",
-                color: isPublic || !code.trim() ? "#6c757d" : "#fff",
+                backgroundColor: isPublic || !(typeof code === "string" && code.trim()) ? "#e9ecef" : "#17C4C4",
+                color: isPublic || !(typeof code === "string" && code.trim()) ? "#6c757d" : "#fff",
                 padding: "0 10px",
               }}
             >
@@ -307,18 +375,26 @@ const EditCollection = () => {
             <div>
               <input
                 type="checkbox"
-                checked={isPublic}
-                onChange={(e) => handleCheckboxChange("public", e.target.checked)}
+                checked={checkboxType === "public" ? pendingCheckboxValue?.value ?? isPublic : isPublic}
+                onChange={e => handleCheckboxChange("public", e.target.checked)}
               />
               <label style={{ marginLeft: "8px" }}>Set as Public</label>
             </div>
             <div>
               <input
                 type="checkbox"
-                checked={isOnline}
-                onChange={(e) => handleCheckboxChange("online", e.target.checked)}
+                checked={checkboxType === "online" ? pendingCheckboxValue?.value ?? isOnline : isOnline}
+                onChange={e => handleCheckboxChange("online", e.target.checked)}
               />
               <label style={{ marginLeft: "8px" }}>Online</label>
+            </div>
+            <div>
+              <input
+                type="checkbox"
+                checked={checkboxType === "rewards" ? pendingCheckboxValue?.value ?? gotRewards : gotRewards}
+                onChange={e => handleCheckboxChange("rewards", e.target.checked)}
+              />
+              <label style={{ marginLeft: "8px" }}>Enable Rewards</label>
             </div>
           </div>
           {/* Welcome Message Field */}

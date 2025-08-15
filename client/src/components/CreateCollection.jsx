@@ -9,7 +9,8 @@ const CreateCollection = () => {
   const [code, setCode] = useState("");
   const [welcomeMessage, setWelcomeMessage] = useState(""); 
   const [isPublic, setIsPublic] = useState(false);
-  const [isOnline, setIsOnline] = useState(true);
+  const [isOnline, setIsOnline] = useState(false);
+  const [gotRewards, setGotRewards] = useState(true); // If you ever prefill, use setGotRewards(data.gotRewards === true)
   const [existingPublicCollection, setExistingPublicCollection] = useState(null);
   const [checkboxType, setCheckboxType] = useState(null);
   const [showPublicConfirmModal, setShowPublicConfirmModal] = useState(false);
@@ -102,6 +103,7 @@ const CreateCollection = () => {
           isPublic,
           isOnline,
           welcomeMessage, 
+          gotRewards,
         }),
       });
       if (res.ok) {
@@ -114,8 +116,14 @@ const CreateCollection = () => {
         setShowSuccessModal(true);
       } else {
         const data = await res.json();
-        setModalTitle("Error");
-        setModalMessage(data.message || "Failed to create collection.");
+        const msg = (data.message || "").toLowerCase();
+        if (msg.includes("code must be unique") || msg.includes("duplicate key") || msg.includes("e11000")) {
+          setModalTitle("Duplicate Code");
+          setModalMessage("This collection code is already in use. Please choose a different code.");
+        } else {
+          setModalTitle("Error");
+          setModalMessage(data.message || "Failed to create collection.");
+        }
         setShowErrorModal(true);
       }
     } catch {
@@ -141,7 +149,14 @@ const CreateCollection = () => {
   };
 
   const handleCheckboxChange = (type, newValue) => {
-    // Save previous value
+    // Prevent setting online if no questions
+    if (type === "online" && newValue) {
+      // For create, there are no questions yet
+      setModalTitle("Cannot Set Online");
+      setModalMessage("You must add at least one question to set the collection online.");
+      setShowErrorModal(true);
+      return;
+    }
     setCheckboxType(type);
     setModalTitle(type === "public" ? "Set as Public?" : "Set Online?");
     setModalMessage(
@@ -153,7 +168,6 @@ const CreateCollection = () => {
         ? "The collection will be playable by users."
         : "The collection will be disabled and unplayable."
     );
-    // Store the value the user wants to set, but don't update state yet
     setPendingCheckboxValue({ type, value: newValue });
     setShowCheckboxInfoModal(true);
   };
@@ -236,6 +250,14 @@ const CreateCollection = () => {
                 onChange={(e) => handleCheckboxChange("online", e.target.checked)}
               />
               <label style={{ marginLeft: "8px" }}>Online</label>
+            </div>
+            <div>
+              <input
+                type="checkbox"
+                checked={gotRewards}
+                onChange={e => setGotRewards(e.target.checked)}
+              />
+              <label style={{ marginLeft: "8px" }}>Enable Rewards</label>
             </div>
           </div>
           {/* Welcome Message Field */}

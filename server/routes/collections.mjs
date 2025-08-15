@@ -2,6 +2,8 @@ import express from 'express';
 import Collection from '../models/collectiondb.mjs';
 import GlobalSettings from "../models/globalSettingsdb.mjs";
 import Player from "../models/playerdb.mjs";
+import AutoClearConfig from "../models/autoCleardb.mjs";
+import AutoClearLog from "../models/autoClearLogsdb.mjs";
 
 
 const router = express.Router();
@@ -150,7 +152,9 @@ router.get('/:id/effective-settings', async (req, res) => {
 // Create a new collection
 router.post('/', async (req, res) => {
   try {
-    const { name, code, questionOrder = [], gameMode = 'default', isPublic = false, isOnline = true, welcomeMessage = "" } = req.body;
+  let { name, code, questionOrder = [], gameMode = 'default', isPublic = false, isOnline = false, welcomeMessage = "", gotRewards } = req.body;
+  // Ensure gotRewards is always boolean (true or false), never undefined
+  gotRewards = typeof gotRewards === 'boolean' ? gotRewards : true;
 
     // Only check for code uniqueness if the collection is not public
     if (!isPublic && code) {
@@ -158,6 +162,11 @@ router.post('/', async (req, res) => {
       if (existing) {
         return res.status(400).json({ message: "Collection code must be unique" });
       }
+    }
+
+    // If isOnline is true, must have at least 1 question
+    if (isOnline && (!Array.isArray(questionOrder) || questionOrder.length === 0)) {
+      return res.status(400).json({ message: "A collection must have at least 1 question to be set online." });
     }
 
     // Validate that only one public collection is online
@@ -177,6 +186,7 @@ router.post('/', async (req, res) => {
       isPublic,
       isOnline,
       welcomeMessage,
+      gotRewards,
     });
     res.status(201).json(newCollection);
   } catch (error) {
@@ -187,17 +197,43 @@ router.post('/', async (req, res) => {
 // Update an existing collection
 router.patch('/:id', async (req, res) => {
   try {
-    const { name, code, questionOrder, gameMode, isPublic, isOnline, welcomeMessage } = req.body;
+  const { name, code, questionOrder, gameMode, isPublic, isOnline, welcomeMessage, gotRewards } = req.body;
 
     const updateData = {};
+    // Fetch current collection to compare code
+    const currentCollection = await Collection.findById(req.params.id);
+    if (!currentCollection) {
+      return res.status(404).json({ message: "Collection not found" });
+    }
     if (name) updateData.name = name;
-    if (code) updateData.code = code;
     if (questionOrder) updateData.questionOrder = questionOrder;
     if (gameMode) updateData.gameMode = gameMode;
     if (isPublic !== undefined) updateData.isPublic = isPublic;
     if (isOnline !== undefined) updateData.isOnline = isOnline;
     if (welcomeMessage !== undefined) updateData.welcomeMessage = welcomeMessage; 
+  if (gotRewards !== undefined) updateData.gotRewards = gotRewards;
 
+    // Only update code if provided and different from current value
+    if (!isPublic && typeof code === 'string' && code.trim() && code !== currentCollection.code) {
+      // Duplicate code check
+      const existing = await Collection.findOne({ code, _id: { $ne: req.params.id } });
+      if (existing) {
+        return res.status(400).json({ message: "Collection code must be unique" });
+      }
+      updateData.code = code;
+    }
+
+    // If isOnline is true, must have at least 1 question
+    if (isOnline) {
+      // Use the new questionOrder if provided, else use the current one
+      let questionsToCheck = questionOrder;
+      if (!questionsToCheck) {
+        questionsToCheck = currentCollection.questionOrder;
+      }
+      if (!Array.isArray(questionsToCheck) || questionsToCheck.length === 0) {
+        return res.status(400).json({ message: "A collection must have at least 1 question to be set online." });
+      }
+    }
 
     if (isPublic && isOnline) {
       const onlinePublic = await Collection.findOne({
@@ -222,6 +258,10 @@ router.patch('/:id', async (req, res) => {
 
     res.status(200).json(updated);
   } catch (error) {
+    // Check for MongoDB duplicate key error
+    if (error.code === 11000 || (error.message && error.message.toLowerCase().includes('duplicate key'))) {
+      return res.status(400).json({ message: "Collection code must be unique" });
+    }
     res.status(400).json({ message: "Failed to update collection", error: error.message });
   }
 });
@@ -287,7 +327,7 @@ router.patch('/:id/game-settings', async (req, res) => {
   }
 });
 
-// Delete collection and associated players
+// Delete collection and associated players, auto clear configs, and logs
 router.delete("/:id", async (req, res) => {
   try {
     const collection = await Collection.findById(req.params.id);
@@ -304,15 +344,23 @@ router.delete("/:id", async (req, res) => {
     // Delete all players associated with this collection
     const playerDeleteResult = await Player.deleteMany({ collectionId: collection._id });
 
+    // Delete all auto clear configs for this collection
+    const autoClearConfigDeleteResult = await AutoClearConfig.deleteMany({ collectionId: collection._id });
+
+    // Delete all auto clear logs for this collection
+    const autoClearLogDeleteResult = await AutoClearLog.deleteMany({ collectionId: collection._id });
+
     // Delete the collection
     await Collection.findByIdAndDelete(req.params.id);
 
     res.status(200).json({
-      message: "Collection and associated players deleted successfully.",
+      message: "Collection, associated players, auto clear configs, and logs deleted successfully.",
       deletedPlayersCount: playerDeleteResult.deletedCount,
+      deletedAutoClearConfigs: autoClearConfigDeleteResult.deletedCount,
+      deletedAutoClearLogs: autoClearLogDeleteResult.deletedCount,
     });
   } catch (error) {
-    res.status(500).json({ message: "Failed to delete collection and players", error: error.message });
+    res.status(500).json({ message: "Failed to delete collection and related data", error: error.message });
   }
 });
 

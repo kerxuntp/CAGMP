@@ -12,6 +12,9 @@ export default function ResultPage() {
   const [correctAnswers, setCorrectAnswers] = useState(0);
   const [totalQuestions, setTotalQuestions] = useState(0);
 
+  // Collection state for rewards
+  const [collection, setCollection] = useState(null);
+
   // Modal visibility states
   const [showRedeemModal, setShowRedeemModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -38,10 +41,18 @@ export default function ResultPage() {
     // Fetch player info from backend
     const fetchPlayer = async () => {
       try {
-          const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/players/${playerId}`);
+        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/players/${playerId}`);
         if (!res.ok) throw new Error("Player not found");
         const data = await res.json();
         setPlayer(data);
+        // Fetch collection info for rewards
+        if (data.collectionId) {
+          const cres = await fetch(`${import.meta.env.VITE_API_BASE_URL}/collections/${data.collectionId}`);
+          if (cres.ok) {
+            const cdata = await cres.json();
+            setCollection(cdata);
+          }
+        }
         setLoading(false);
       } catch (err) {
         console.error("Failed to fetch player data:", err.message);
@@ -145,6 +156,9 @@ export default function ResultPage() {
   const { formattedDate, formattedTime } = getFinishedDateTime();
   const totalTime = player.totalTimeInSeconds || 0;
 
+  // Show redeem section only if gotRewards is exactly true
+  const showRewards = collection?.gotRewards === true;
+
   return (
     <div className="page-container">
       <img src="/images/waterfall.jpg" alt="Background" className="page-background" />
@@ -172,28 +186,42 @@ export default function ResultPage() {
           <div><strong>Wrong Attempts:</strong> {player.wrongAnswers || 0}</div>
         </div>
 
-        <div className="button-group">
-          <button className="leaderboard-button" onClick={() => navigate("/leaderboard")}>
+        <div className="button-group" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem", marginBottom: "1rem" }}>
+          <button className="leaderboard-button" onClick={() => navigate("/leaderboard")}> 
             Leaderboard
+          </button>
+          <button
+            className="leaderboard-button"
+            style={{ backgroundColor: "#17C4C4", color: "#fff" }}
+            onClick={() => navigate("/")}
+          >
+            Return to Home
           </button>
         </div>
 
-        <p style={{ fontWeight: "bold", marginTop: "2rem" }}>
-          Redeem your gift now!
-        </p>
-
-        {/* Show redeem button if not redeemed */}
-        {!player.redeemed ? (
-          <button
-            onClick={handleRedeemClick}
-            className="login-btn"
-            style={{ marginTop: "1rem" }}
-          >
-            Click here to redeem
-          </button>
+        {showRewards ? (
+          <>
+            <p style={{ fontWeight: "bold", marginTop: "2rem" }}>
+              Redeem your gift now!
+            </p>
+            {/* Show redeem button if not redeemed */}
+            {!player.redeemed ? (
+              <button
+                onClick={handleRedeemClick}
+                className="login-btn"
+                style={{ marginTop: "1rem" }}
+              >
+                Click here to redeem
+              </button>
+            ) : (
+              <p style={{ color: "green", fontWeight: "bold", marginTop: "1rem" }}>
+                Redeemed at {new Date(player.redeemedAt).toLocaleString("en-SG")}
+              </p>
+            )}
+          </>
         ) : (
-          <p style={{ color: "green", fontWeight: "bold", marginTop: "1rem" }}>
-            Redeemed at {new Date(player.redeemedAt).toLocaleString("en-SG")}
+          <p style={{ fontWeight: "bold", marginTop: "2rem", color: "#2e7d32" }}>
+            Thanks for playing!
           </p>
         )}
 
@@ -208,39 +236,44 @@ export default function ResultPage() {
       </div>
 
       {/* Redeem Confirmation Modal */}
-      <AlertModal
-        isOpen={showRedeemModal}
-        onClose={() => setShowRedeemModal(false)}
-        onConfirm={handleConfirmRedeem}
-        title="Redeem Gift"
-        message="Once you click confirm, please claim your reward at the booth immediately."
-        confirmText="Redeem Now"
-        cancelText="Cancel"
-        type="warning"
-      />
+      {showRewards && (
+        <>
+          {/* Redeem Confirmation Modal */}
+          <AlertModal
+            isOpen={showRedeemModal}
+            onClose={() => setShowRedeemModal(false)}
+            onConfirm={handleConfirmRedeem}
+            title="Redeem Gift"
+            message="Once you click confirm, please claim your reward at the booth immediately."
+            confirmText="Redeem Now"
+            cancelText="Cancel"
+            type="warning"
+          />
 
-      {/* Success Modal */}
-      <AlertModal
-        isOpen={showSuccessModal}
-        onClose={() => setShowSuccessModal(false)}
-        title="Success"
-        message="Your gift has been marked as redeemed. Please head to the booth now."
-        confirmText="Got it"
-        type="success"
-        showCancel={false}
-      />
+          {/* Success Modal */}
+          <AlertModal
+            isOpen={showSuccessModal}
+            onClose={() => setShowSuccessModal(false)}
+            title="Success"
+            message="Your gift has been marked as redeemed. Please head to the booth now."
+            confirmText="Got it"
+            type="success"
+            showCancel={false}
+          />
 
-      {/* Error Modal */}
-      <AlertModal
-        isOpen={showErrorModal}
-        onClose={() => setShowErrorModal(false)}
-        title="Error"
-        message="There was an error redeeming your gift. Please try again or contact staff."
-        confirmText="Try Again"
-        cancelText="Cancel"
-        type="error"
-        onConfirm={handleRedeemClick}
-      />
+          {/* Error Modal */}
+          <AlertModal
+            isOpen={showErrorModal}
+            onClose={() => setShowErrorModal(false)}
+            title="Error"
+            message="There was an error redeeming your gift. Please try again or contact staff."
+            confirmText="Try Again"
+            cancelText="Cancel"
+            type="error"
+            onConfirm={handleRedeemClick}
+          />
+        </>
+      )}
     </div>
   );
 }

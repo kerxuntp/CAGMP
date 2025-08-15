@@ -117,7 +117,7 @@ const GetCollection = () => {
 
     setModalTitle("Confirm Delete");
     setModalMessage(
-      `Are you sure you want to delete "${selectedCollection.name}"? Questions will remain in the database.`
+      `Are you sure you want to delete "${selectedCollection.name}"?\n\nThis will also delete all players, auto clear configs, and logs associated with this collection. Questions will be preserved.`
     );
     setOnConfirmAction(() => async () => {
       try {
