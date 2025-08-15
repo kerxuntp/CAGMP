@@ -157,6 +157,16 @@ router.patch('/:id', upload.single('image'), async (req, res) => {
       await Collection.updateMany({}, { $pull: { questionOrder: questionDoc._id } });
       // Add to selected collections
       await Promise.all(validIds.map(id => Collection.findByIdAndUpdate(id, { $addToSet: { questionOrder: questionDoc._id } }))); 
+      // After updating collections, set isOnline to false for any collection with zero questions
+      const allCollections = await Collection.find({});
+      await Promise.all(
+        allCollections.map(async (col) => {
+          if (Array.isArray(col.questionOrder) && col.questionOrder.length === 0 && col.isOnline) {
+            col.isOnline = false;
+            await col.save();
+          }
+        })
+      );
       // Do NOT update any collectionIds field on the question itself (shared-question model)
     }
 
