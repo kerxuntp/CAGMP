@@ -190,13 +190,6 @@ export default function ResultPage() {
           <button className="leaderboard-button" onClick={() => navigate("/leaderboard")}> 
             Leaderboard
           </button>
-          <button
-            className="leaderboard-button"
-            style={{ backgroundColor: "#17C4C4", color: "#fff" }}
-            onClick={() => navigate("/")}
-          >
-            Return to Home
-          </button>
         </div>
 
         {showRewards ? (

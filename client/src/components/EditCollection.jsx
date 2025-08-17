@@ -16,8 +16,6 @@ const EditCollection = () => {
   const [gotRewards, setGotRewards] = useState(undefined);
   const [isLoading, setIsLoading] = useState(true);
   const [pendingCheckboxValue, setPendingCheckboxValue] = useState(null);
-  const [prevIsPublic, setPrevIsPublic] = useState(false);
-  const [prevIsOnline, setPrevIsOnline] = useState(true);
   const [existingPublicCollection, setExistingPublicCollection] = useState(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
@@ -57,8 +55,6 @@ const EditCollection = () => {
         setCode(typeof data.code === "string" ? data.code : "");
         setIsPublic(data.isPublic);
         setIsOnline(data.isOnline);
-        setPrevIsPublic(data.isPublic);
-        setPrevIsOnline(data.isOnline);
         setWelcomeMessage(data.welcomeMessage || "");
         setGotRewards(data.gotRewards === true);
       } catch {
@@ -242,12 +238,10 @@ const EditCollection = () => {
   const handleCheckboxConfirm = () => {
     if (pendingCheckboxValue) {
       if (pendingCheckboxValue.type === "public") {
-        setPrevIsPublic(isPublic);
         setIsPublic(pendingCheckboxValue.value);
         if (pendingCheckboxValue.value) setCode("");
       }
       if (pendingCheckboxValue.type === "online") {
-        setPrevIsOnline(isOnline);
         setIsOnline(pendingCheckboxValue.value);
       }
       if (pendingCheckboxValue.type === "rewards") {
